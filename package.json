@@ -2,6 +2,5 @@
   "name": "expert-worker",
   "private": true,
   "scripts": {"stress": "node tests/stress.mjs"},
-  "dependencies": {"@openrouter/sdk": "1.2.18"},
   "devDependencies": {"wrangler": "^4.0.0", "msw": "^2.0.0"}
 }
