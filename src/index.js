@@ -1,7 +1,7 @@
 import { OpenRouter } from "@openrouter/sdk";
 const SERVICE="expert-worker",API_VERSION="2026-08-15",MAX_BODY=65536,MAX_MODELS=4;
 const POLICY={fail_closed:true,single_active_task:true,network:"openrouter-only",tools:false,web:false,history_weight:0,reasoning_effort:"high",exclude_providers:["openai","anthropic"],exclude_free:true,exclude_flash:true,max_retries:0,max_models:MAX_MODELS,judge_required:true,model_selection:"reasoning+most-popular"};
-const CAP={task_profiler:true,dynamic_models:true,company_diversity:true,experts:true,judge:true,openrouter_sdk:true,official_model_catalog:true,tools:false,web:false,duplicate_task_rejected:true,cancel_checked_between_calls:true,external_calls_inside_single_task_lock:true};
+const CAP={task_profiler:true,dynamic_models:true,company_diversity:true,experts:true,judge:true,openrouter_sdk:true,official_model_catalog:true,tools:false,web:false,duplicate_task_rejected:true,cancel_checked_between_calls:true,external_calls_inside_single_task_lock:true,sdk_retries_disabled:true};
 const now=()=>new Date().toISOString(),rid=()=>crypto.randomUUID();
 const int=(v,d)=>{const n=Number(v);return Number.isFinite(n)?Math.trunc(n):d};
 const json=(x,s=200)=>Response.json(x,{status:s,headers:{"cache-control":"no-store"}});
@@ -32,7 +32,7 @@ function nonFree(m){const p=m?.pricing||{};return Number(p.prompt||0)>0||Number(
 function company(id){return String(id).split("/")[0].toLowerCase()}
 async function modelCatalog(env){const u=new URL("https://openrouter.ai/api/v1/models");u.searchParams.set("supported_parameters","reasoning");u.searchParams.set("sort","most-popular");u.searchParams.set("output_modalities","text");const c=new AbortController(),t=setTimeout(()=>c.abort(),8000);try{const r=await fetch(u,{headers:{authorization:`Bearer ${env.OPENROUTER_API_KEY}`,accept:"application/json"},signal:c.signal});const x=await r.json().catch(()=>null);if(!r.ok)throw Object.assign(new Error("MODEL_CATALOG_UNAVAILABLE"),{status:502});return(x?.data||[]).filter(m=>allowed(m?.id)&&nonFree(m))}finally{clearTimeout(t)}}
 async function selectModels(env,count,requested){const list=await modelCatalog(env),byId=new Map(list.map(m=>[m.id,m])),out=[],seen=new Set();for(const id of Array.isArray(requested)?requested:[]){const m=byId.get(String(id));if(!m)continue;const co=company(m.id);if(seen.has(co))continue;seen.add(co);out.push(m.id);if(out.length>=count)return out}for(const m of list){const co=company(m.id);if(seen.has(co))continue;seen.add(co);out.push(m.id);if(out.length>=count)break}return out}
-async function call(env,model,messages,maxTokens){const client=new OpenRouter({apiKey:env.OPENROUTER_API_KEY});return client.chat.send({model,messages,reasoning:{effort:"high"},temperature:0.2,stream:false,...(maxTokens?{maxTokens}:{})})}
+async function call(env,model,messages,maxTokens){const client=new OpenRouter({apiKey:env.OPENROUTER_API_KEY});return client.chat.send({model,messages,reasoning:{effort:"high"},temperature:0.2,stream:false,...(maxTokens?{maxTokens}:{})},{retries:{strategy:"none"}})}
 async function ensureNotCancelled(env,id){const t=await load(env,id);if(t.task?.cancel_requested)throw Object.assign(new Error("CANCELLED"),{status:409})}
 async function run(req,env){
   if(!env.OPENROUTER_API_KEY)return err("UPSTREAM_AUTH_FAILED","OPENROUTER_API_KEY is not configured",503);

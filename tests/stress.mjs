@@ -45,7 +45,7 @@ try{
 
   await reset();armHold();const cancelRun=run("expert-cancel","HOLD_CHAT cancellation test",2);await within(holdEntered,5000,"cancel-chat-entry");const cancel=await post("/v1/cancel",{task_id:"expert-cancel"});assert.equal(cancel.status,202);letGo();const cancelled=await within(cancelRun,8000,"cancel-finish");assert.equal(cancelled.status,409);assert.equal(cancelled.body?.error,"CANCELLED");assert.equal(chatCalls,1,"judge call must not execute after cancellation");assert.equal((await run("after-cancel","NORMAL",2)).status,200);
 
-  await reset();const failed=await run("chat-fail","FAIL_CHAT",2);assert.equal(failed.status,502);assert.equal(failed.body?.error,"UPSTREAM_UNAVAILABLE");assert.equal((await run("after-chat-fail","NORMAL",2)).status,200,"lock must release after chat failure");
+  await reset();const failed=await run("chat-fail","FAIL_CHAT",2);assert.equal(failed.status,502);assert.equal(failed.body?.error,"UPSTREAM_UNAVAILABLE");assert.equal(chatCalls,1,"SDK retry policy must not repeat a failed paid chat request");assert.equal((await run("after-chat-fail","NORMAL",2)).status,200,"lock must release after chat failure");
 
   await reset();const filtered=await run("filter-clamp","NORMAL",99);assert.equal(filtered.status,200);const models=filtered.body?.models||[];assert.equal(models.length,4,"model_count must clamp to four");assert.equal(models.some(banned),false,"banned/free/flash providers must be excluded");assert.equal(new Set(models.map(x=>String(x).split("/")[0])).size,4,"companies must be unique");assert.equal(catalogCalls,1);assert.equal(chatCalls,4,"three experts plus one judge for four selected models");
 
@@ -54,7 +54,7 @@ try{
   await reset();const huge={task_id:"huge",prompt:"x".repeat(70000)};const hr=await server.fetch("/v1/run",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(huge)});assert.equal(hr.status,413);assert.equal(catalogCalls,0);assert.equal(chatCalls,0);
   const health=await within(Promise.all(Array.from({length:256},()=>server.fetch("/health"))),10000,"health-burst");assert.equal(health.filter(r=>r.status===200).length,256);
 
-  console.log(JSON.stringify({ok:true,suite:"expert-stress",concurrency_contenders:64,duplicate_contenders:64,rate_burst:220,health_burst:256,tests:["single-catalog-path","single-paid-path","duplicate-id","cancel-before-judge","failure-release","model-filter","company-diversity","model-clamp","rate-no-external-call","body-limit","read-burst"]}));
+  console.log(JSON.stringify({ok:true,suite:"expert-stress",concurrency_contenders:64,duplicate_contenders:64,rate_burst:220,health_burst:256,tests:["single-catalog-path","single-paid-path","duplicate-id","cancel-before-judge","sdk-no-retry","failure-release","model-filter","company-diversity","model-clamp","rate-no-external-call","body-limit","read-burst"]}));
 }catch(e){exitCode=1;try{server.debug()}catch{}console.error(e)}
 try{await Promise.race([server.close(),new Promise(r=>setTimeout(r,2000))])}catch{}
 network.close();clearTimeout(watchdog);process.exit(exitCode);
