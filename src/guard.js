@@ -23,9 +23,23 @@ async function cancel(req,env){const b=await req.json().catch(()=>({})),id=Strin
 function modelAllowed(id){const x=String(id||"").toLowerCase();return x&&!x.startsWith("openai/")&&!x.startsWith("anthropic/")&&!x.includes("claude")&&!x.includes("flash")&&!x.includes(":free")}
 async function sha256(v){const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(String(v||"")));return[...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,"0")).join("")}
 
+async function mapNoReplacement(body,env,status){
+  if(body?.error!=="NO_REPLACEMENT_MODEL_AVAILABLE")return null;
+  const id=String(body?.details?.task_id||body?.task_id||"");
+  if(!id)return null;
+  const t=await g(env,`/task/${encodeURIComponent(id)}`).catch(()=>null),last=String(t?.task?.last_stage_error||""),stage=String(t?.task?.last_failed_stage||"");
+  if(!last)return null;
+  let code=last,http=status;
+  if(last==="EMPTY_MODEL_OUTPUT")code=stage==="judge"?"EMPTY_JUDGE_OUTPUT":"EMPTY_EXPERT_OUTPUT";
+  if(last==="UPSTREAM_TIMEOUT")http=504;
+  await g(env,`/task/${encodeURIComponent(id)}`,"POST",{status:"failed",error:code,finished_at:new Date().toISOString()}).catch(()=>{});
+  return json({...body,error:code,message:last==="UPSTREAM_TIMEOUT"?"OpenRouter model stage timed out and no cross-company replacement was available":"OpenRouter returned an empty model result and no cross-company replacement was available"},http);
+}
+
 async function validateRunResponse(r,env){
   const body=await r.clone().json().catch(()=>null);
   if(!r.ok){
+    const mapped=await mapNoReplacement(body,env,r.status);if(mapped)return mapped;
     if(body?.error==="EMPTY_MODEL_OUTPUT"){
       const stage=String(body?.details?.stage_details?.stage||"");
       const code=stage==="judge"?"EMPTY_JUDGE_OUTPUT":"EMPTY_EXPERT_OUTPUT";
