@@ -1,0 +1,20 @@
+{
+  "schema_version":"1.0",
+  "name":"personal-hospital-panel",
+  "network":"deny",
+  "tools":"deny",
+  "input":"governance-prepared evidence and compute packet only",
+  "core_roles":[
+    {"role":"emergency-triage","mandate":"identify instability, red flags, time-sensitive cannot-miss conditions and required escalation before routine analysis"},
+    {"role":"general-internal-medicine","mandate":"build concise problem representation and prioritized differential across organ systems"},
+    {"role":"laboratory-medicine","mandate":"review specimen/context, units, reference ranges, trends, discordant labs and preanalytic limitations"},
+    {"role":"radiology","mandate":"review imaging findings, modality limitations, appropriateness and imaging differential when imaging is material"},
+    {"role":"clinical-pharmacy","mandate":"review medication reconciliation, contraindications, interactions, duplications and monitoring requirements"},
+    {"role":"diagnostic-safety-challenger","mandate":"independently attack the leading diagnosis, seek alternatives, identify anchoring/premature closure and missing tests"},
+    {"role":"patient-plan-editor","mandate":"translate consensus into a patient-readable next-step and escalation plan without overstating certainty"}
+  ],
+  "specialty_router":["cardiology","neurology","pulmonology","infectious-disease","gastroenterology-hepatology","nephrology","endocrinology-metabolism","hematology-oncology","rheumatology-immunology","dermatology","musculoskeletal-orthopedics","ophthalmology","otolaryngology","urology","psychiatry","sleep-medicine","nutrition","genetics-rare-disease"],
+  "routing_rules":{"routine":"internal-medicine + relevant specialty + safety challenger","imaging":"add radiology","medication":"add clinical pharmacy","high-risk":"emergency-triage + internal-medicine + relevant specialty + safety challenger + pharmacy/radiology as relevant","multi-system-or-unclear":"MDT with at least three distinct specialty perspectives"},
+  "consensus_rules":["experts reason independently before synthesis","minority opinion retained when clinically material","cannot-miss diagnosis cannot be removed solely by majority vote","disagreement produces explicit uncertainty and next discriminating test/action","no model self-certifies final diagnosis"],
+  "required_output":["urgency","problem_representation","ranked_differential","cannot_miss","evidence_for","evidence_against","missing_information","test_or_followup_options","medication_safety","specialty_disagreements","confidence","uncertainty","escalation_triggers","sources"]
+}
