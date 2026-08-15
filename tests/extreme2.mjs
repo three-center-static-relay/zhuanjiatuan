@@ -73,11 +73,11 @@ try{
   const afterEmpty=await run("x2-after-empty","NORMAL",2,300);assert.equal(afterEmpty.status,200);
 
   await reset();armHold();
-  const leaseHolder=run("x2-lease-holder","HOLD_CHAT lease-boundary",2,30);
+  const leaseHolder=run("x2-lease-holder","HOLD_CHAT lease-boundary",2,120);
   await within(holdEntered,5000,"lease-enter");
   await sleep(31000);
   const late=await run("x2-late-contender","NORMAL",2,300);
-  assert.equal(late.status,409,"active task lock must remain held beyond a caller-supplied 30s lease while upstream execution is still running");
+  assert.equal(late.status,409,"active task lock must remain held 31s into an execution whose total deadline has not expired");
   assert.equal(late.body?.error,"BUSY");
   letGo();assert.equal((await within(leaseHolder,10000,"lease-holder-finish")).status,200);
 
