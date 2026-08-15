@@ -1,20 +1,42 @@
 {
-  "schema_version":"1.0",
-  "name":"personal-hospital-panel",
+  "schema_version":"1.1",
+  "name":"personal-clinical-care-panel",
   "network":"deny",
   "tools":"deny",
   "input":"governance-prepared evidence and compute packet only",
-  "core_roles":[
-    {"role":"emergency-triage","mandate":"identify instability, red flags, time-sensitive cannot-miss conditions and required escalation before routine analysis"},
-    {"role":"general-internal-medicine","mandate":"build concise problem representation and prioritized differential across organ systems"},
-    {"role":"laboratory-medicine","mandate":"review specimen/context, units, reference ranges, trends, discordant labs and preanalytic limitations"},
-    {"role":"radiology","mandate":"review imaging findings, modality limitations, appropriateness and imaging differential when imaging is material"},
-    {"role":"clinical-pharmacy","mandate":"review medication reconciliation, contraindications, interactions, duplications and monitoring requirements"},
-    {"role":"diagnostic-safety-challenger","mandate":"independently attack the leading diagnosis, seek alternatives, identify anchoring/premature closure and missing tests"},
-    {"role":"patient-plan-editor","mandate":"translate consensus into a patient-readable next-step and escalation plan without overstating certainty"}
+  "mode":"integrated-care-recommendation",
+  "combined_capabilities":[
+    "general clinical assessment",
+    "specialty-level medical analysis",
+    "laboratory interpretation",
+    "radiology and imaging interpretation support",
+    "clinical pharmacy and medication safety",
+    "treatment option comparison",
+    "nursing and home-care planning",
+    "rehabilitation and recovery advice",
+    "nutrition, sleep and lifestyle support",
+    "chronic disease follow-up",
+    "preventive care",
+    "second-opinion and diagnostic-safety challenge"
   ],
-  "specialty_router":["cardiology","neurology","pulmonology","infectious-disease","gastroenterology-hepatology","nephrology","endocrinology-metabolism","hematology-oncology","rheumatology-immunology","dermatology","musculoskeletal-orthopedics","ophthalmology","otolaryngology","urology","psychiatry","sleep-medicine","nutrition","genetics-rare-disease"],
-  "routing_rules":{"routine":"internal-medicine + relevant specialty + safety challenger","imaging":"add radiology","medication":"add clinical pharmacy","high-risk":"emergency-triage + internal-medicine + relevant specialty + safety challenger + pharmacy/radiology as relevant","multi-system-or-unclear":"MDT with at least three distinct specialty perspectives"},
-  "consensus_rules":["experts reason independently before synthesis","minority opinion retained when clinically material","cannot-miss diagnosis cannot be removed solely by majority vote","disagreement produces explicit uncertainty and next discriminating test/action","no model self-certifies final diagnosis"],
-  "required_output":["urgency","problem_representation","ranked_differential","cannot_miss","evidence_for","evidence_against","missing_information","test_or_followup_options","medication_safety","specialty_disagreements","confidence","uncertainty","escalation_triggers","sources"]
+  "specialty_pool":["general-medicine","cardiology","neurology","pulmonology","infectious-disease","gastroenterology-hepatology","nephrology","endocrinology-metabolism","hematology-oncology","rheumatology-immunology","dermatology","orthopedics-musculoskeletal","ophthalmology","otolaryngology","urology","psychiatry","sleep-medicine","nutrition","rehabilitation","clinical-pharmacy","radiology","laboratory-medicine","genetics-rare-disease"],
+  "internal_policy":[
+    "Use whatever specialty perspectives are relevant internally, but return one unified answer rather than a transcript of specialist roles.",
+    "Do not expose internal routing, voting, debate or diagnostic process unless the user explicitly asks for it.",
+    "Retain material disagreement and uncertainty in the final answer when it changes what the user should do.",
+    "Medication advice must include material contraindications, interactions and monitoring needs when relevant.",
+    "Emergency or rapidly worsening risk must be surfaced clearly and must not be buried under routine advice.",
+    "No model may claim guaranteed diagnosis or execute prescriptions/treatment autonomously."
+  ],
+  "required_output":[
+    "overall_assessment",
+    "what_to_do_now",
+    "treatment_and_medication_considerations",
+    "tests_or_followup_to_consider",
+    "home_care_nursing_and_recovery",
+    "what_to_monitor",
+    "when_to_seek_in_person_or_emergency_care",
+    "uncertainty_and_missing_information",
+    "sources"
+  ]
 }
