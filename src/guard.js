@@ -24,8 +24,15 @@ function modelAllowed(id){const x=String(id||"").toLowerCase();return x&&!x.star
 async function sha256(v){const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(String(v||"")));return[...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,"0")).join("")}
 
 async function validateRunResponse(r,env){
-  if(!r.ok)return r;
   const body=await r.clone().json().catch(()=>null);
+  if(!r.ok){
+    if(body?.error==="EMPTY_MODEL_OUTPUT"){
+      const stage=String(body?.details?.stage_details?.stage||"");
+      const code=stage==="judge"?"EMPTY_JUDGE_OUTPUT":"EMPTY_EXPERT_OUTPUT";
+      return json({...body,error:code},r.status);
+    }
+    return r;
+  }
   if(body?.status!=="completed")return r;
   const answers=Array.isArray(body?.answers)?body.answers:[];
   const expertEmpty=answers.length===0||answers.some(a=>!String(a?.content||"").trim());
