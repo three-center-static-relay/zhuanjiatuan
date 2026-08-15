@@ -44,7 +44,8 @@ try{
   const holder=run("x2-holder","HOLD_CHAT unique-overload",4,300);
   await within(holdEntered,5000,"holder-enter");
   const unique=await within(Promise.all(Array.from({length:256},(_,i)=>run(`x2-u-${i}`,"NORMAL",4,300))),25000,"256-unique");
-  assert.equal(unique.filter(x=>x.status===409&&x.body?.error==="BUSY").length,256);
+  assert.equal(unique.filter(x=>x.status===409&&x.body?.error==="BUSY").length,199);
+  assert.equal(unique.filter(x=>x.status===429&&x.body?.error==="RATE_LIMITED").length,57);
   assert.equal(catalogCalls,1);assert.equal(chatCalls,1);
   letGo();assert.equal((await within(holder,10000,"holder-finish")).status,200);assert.equal(chatCalls,4);
 
@@ -52,7 +53,8 @@ try{
   const dupHolder=run("x2-dup","HOLD_CHAT duplicate-overload",4,300);
   await within(holdEntered,5000,"dup-enter");
   const dup=await within(Promise.all(Array.from({length:512},()=>run("x2-dup","NORMAL",4,300))),30000,"512-duplicate");
-  assert.equal(dup.filter(x=>x.status===409&&x.body?.error==="DUPLICATE_TASK").length,512);
+  assert.equal(dup.filter(x=>x.status===409&&x.body?.error==="DUPLICATE_TASK").length,199);
+  assert.equal(dup.filter(x=>x.status===429&&x.body?.error==="RATE_LIMITED").length,313);
   assert.equal(catalogCalls,1);assert.equal(chatCalls,1);
   letGo();assert.equal((await within(dupHolder,10000,"dup-finish")).status,200);
 
@@ -88,7 +90,7 @@ try{
   const health=await waves(1024,128,()=>server.fetch(external("/health")),"health");
   assert.equal(health.filter(r=>r.status===200).length,1024);
 
-  console.log(JSON.stringify({ok:true,suite:"expert-extreme2",unique_contenders:256,duplicate_contenders:512,rate_total:2000,health_total:1024,full_model_count:4,lease_boundary_seconds:31,tests:["256-single-lock","512-duplicate-id","4-model-full-chain","bad-json-recovery","empty-output-fail-closed","lease-boundary-no-overlap","2000-rate-overload","1024-health-burst"]}));
+  console.log(JSON.stringify({ok:true,suite:"expert-extreme2",unique_contenders:256,unique_busy:199,unique_rate_limited:57,duplicate_contenders:512,duplicate_rejected:199,duplicate_rate_limited:313,rate_total:2000,health_total:1024,full_model_count:4,lease_boundary_seconds:31,tests:["256-rate-plus-lock","512-rate-plus-duplicate","4-model-full-chain","bad-json-recovery","empty-output-fail-closed","lease-boundary-no-overlap","2000-rate-overload","1024-health-burst"]}));
 }catch(e){exitCode=1;try{server.debug()}catch{}console.error(e)}
 try{await Promise.race([server.close(),new Promise(r=>setTimeout(r,2000))])}catch{}
 network.close();clearTimeout(watchdog);process.exit(exitCode);
