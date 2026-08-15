@@ -48,8 +48,26 @@ async function selftest(env,ctx){
   return json({ok,business_e2e:true,cost_class:"paid-minimal",configured:true,task_id:taskId,http_status:r.status,models,company_diverse:uniqueCompanies,model_policy_pass:modelPolicy,expert_nonempty:expertNonempty,judge_nonempty:judgeNonempty,output_digest:digest,content_scrubbed:true,max_tokens:512,elapsed_ms:Date.now()-started},ok?200:503);
 }
 
+async function extreme4(env,ctx){
+  if(!env.OPENROUTER_API_KEY)return json({ok:false,error:"UPSTREAM_AUTH_FAILED",business_e2e:false,configured:false},503);
+  const taskId=`extreme4-${crypto.randomUUID()}`,started=Date.now();
+  const prompt="Production extreme canary. Solve this deterministic multi-constraint decision problem without external facts: Option A costs 40, latency 20, reliability 0.90; B costs 55, latency 12, reliability 0.96; C costs 30, latency 35, reliability 0.85. Budget is 100. Select a primary and backup option. Independently evaluate cost, reliability, latency, failure modes, uncertainty, and tradeoffs, then recommend the most defensible pair.";
+  const request=new Request("https://expert.internal/v1/run",{method:"POST",headers:{"content-type":"application/json","x-three-center-extreme4":"1"},body:JSON.stringify({task_id:taskId,prompt,model_count:4,max_tokens:1024,timeout_seconds:300,roles:["Quantitative decision analyst","Adversarial failure reviewer","Operations research analyst"]})});
+  const raw=await base.fetch(request,env,ctx),r=await validateRunResponse(raw,env),body=await r.clone().json().catch(()=>null),models=Array.isArray(body?.models)?body.models:[],answers=Array.isArray(body?.answers)?body.answers:[],judge=body?.judge||null;
+  const uniqueCompanies=new Set(models.map(x=>String(x).split("/")[0].toLowerCase())).size===models.length;
+  const modelPolicy=models.length===4&&models.every(modelAllowed)&&uniqueCompanies;
+  const expertsNonempty=answers.filter(a=>Boolean(String(a?.content||"").trim())).length;
+  const judgeNonempty=Boolean(String(judge?.content||"").trim());
+  const completed=r.ok&&body?.ok===true&&body?.status==="completed";
+  const ok=completed&&modelPolicy&&expertsNonempty===3&&judgeNonempty;
+  const digest=await sha256(JSON.stringify({models,answers:answers.map(a=>a?.content||""),judge:judge?.content||""}));
+  await g(env,`/task/${encodeURIComponent(taskId)}`,"POST",{extreme4:true,status:ok?"extreme4-pass":"extreme4-fail",answers:null,judge:null,models,output_digest:digest,extreme4_finished_at:new Date().toISOString()}).catch(()=>{});
+  return json({ok,business_e2e:true,cost_class:"paid-four-model",configured:true,task_id:taskId,http_status:r.status,models,company_diverse:uniqueCompanies,model_policy_pass:modelPolicy,experts_nonempty:expertsNonempty,judge_nonempty:judgeNonempty,output_digest:digest,content_scrubbed:true,max_tokens:1024,elapsed_ms:Date.now()-started},ok?200:503);
+}
+
 export default{async fetch(req,env,ctx){try{
   const u=new URL(req.url);
+  if(req.method==="POST"&&u.pathname==="/v1/.canary/extreme4-20260815")return await extreme4(env,ctx);
   if(req.method==="POST"&&INTERNAL_ONLY.has(u.pathname)&&u.hostname!=="expert.internal")return json({ok:false,error:"POLICY_DENIED",message:"expert execution routes are service-binding internal only"},403);
   if(req.method==="POST"&&u.pathname==="/v1/cancel")return await cancel(req,env);
   if(req.method==="POST"&&u.pathname==="/v1/selftest")return await selftest(env,ctx);
