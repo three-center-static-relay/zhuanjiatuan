@@ -1,7 +1,8 @@
 import base,{CenterGate as BaseCenterGate} from "./index.js";
+import {runGovernanceRelay} from "./governance-relay.js";
 
 const json=(x,s=200)=>Response.json(x,{status:s,headers:{"cache-control":"no-store"}});
-const INTERNAL_ONLY=new Set(["/v1/run","/v1/status","/v1/cancel","/v1/selftest"]);
+const INTERNAL_ONLY=new Set(["/v1/run","/v1/status","/v1/cancel","/v1/selftest","/v1/governance-assist"]);
 
 export class CenterGate{
   constructor(state,env){this.inner=new BaseCenterGate(state,env)}
@@ -66,12 +67,13 @@ async function selftest(env,ctx){
   const uniqueCompanies=new Set(models.map(x=>String(x).split("/")[0].toLowerCase())).size===models.length,modelPolicy=models.length===2&&models.every(modelAllowed)&&uniqueCompanies,expertNonempty=answers.length===1&&Boolean(String(answers[0]?.content||"").trim()),judgeNonempty=Boolean(String(judge?.content||"").trim()),completed=r.ok&&body?.ok===true&&body?.status==="completed",ok=completed&&modelPolicy&&expertNonempty&&judgeNonempty;
   const digest=await sha256(JSON.stringify({models,expert:answers[0]?.content||"",judge:judge?.content||""}));
   await g(env,`/task/${encodeURIComponent(taskId)}`,"POST",{selftest:true,status:ok?"selftest-pass":"selftest-fail",answers:null,judge:null,models,output_digest:digest,selftest_finished_at:new Date().toISOString()}).catch(()=>{});
-  return json({ok,business_e2e:true,cost_class:"paid-minimal",configured:true,task_id:taskId,http_status:r.status,models,company_diverse:uniqueCompanies,model_policy_pass:modelPolicy,expert_nonempty:expertNonempty,judge_nonempty:judgeNonempty,output_digest:digest,content_scrubbed:true,max_tokens:512,elapsed_ms:Date.now()-started},ok?200:503);
+  return json({ok,business_e2e:true,cost_class:"paid-minimal",configured:true,task_id:taskId,http_status:r.status,models,company_diverse:uniqueCompanies,model_policy_pass:modelPolicy,expert_nonempty:expertNonempty,judge_nonempty:judgeNonempty,output_digest:digest,content_scrbed:true,max_tokens:512,elapsed_ms:Date.now()-started},ok?200:503);
 }
 
 export default{async fetch(req,env,ctx){try{
   const u=new URL(req.url);
   if(req.method==="POST"&&INTERNAL_ONLY.has(u.pathname)&&u.hostname!=="expert.internal")return json({ok:false,error:"POLICY_DENIED",message:"expert execution routes are service-binding internal only"},403);
+  if(req.method==="POST"&&u.pathname==="/v1/governance-assist")return await runGovernanceRelay(req,env);
   if(req.method==="POST"&&u.pathname==="/v1/cancel")return await cancel(req,env);
   if(req.method==="POST"&&u.pathname==="/v1/selftest")return await selftest(env,ctx);
   const r=await base.fetch(req,env,ctx);
