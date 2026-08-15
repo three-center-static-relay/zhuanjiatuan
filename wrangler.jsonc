@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "expert-worker",
-  "main": "src/guard.js",
+  "main": "src/governance-guard.js",
   "compatibility_date": "2026-08-14",
   "workers_dev": true,
   "build": {"command": "node tests/stress.mjs && node tests/resilience.mjs"},
