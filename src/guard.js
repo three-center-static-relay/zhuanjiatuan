@@ -67,7 +67,7 @@ async function selftest(env,ctx){
   const uniqueCompanies=new Set(models.map(x=>String(x).split("/")[0].toLowerCase())).size===models.length,modelPolicy=models.length===2&&models.every(modelAllowed)&&uniqueCompanies,expertNonempty=answers.length===1&&Boolean(String(answers[0]?.content||"").trim()),judgeNonempty=Boolean(String(judge?.content||"").trim()),completed=r.ok&&body?.ok===true&&body?.status==="completed",ok=completed&&modelPolicy&&expertNonempty&&judgeNonempty;
   const digest=await sha256(JSON.stringify({models,expert:answers[0]?.content||"",judge:judge?.content||""}));
   await g(env,`/task/${encodeURIComponent(taskId)}`,"POST",{selftest:true,status:ok?"selftest-pass":"selftest-fail",answers:null,judge:null,models,output_digest:digest,selftest_finished_at:new Date().toISOString()}).catch(()=>{});
-  return json({ok,business_e2e:true,cost_class:"paid-minimal",configured:true,task_id:taskId,http_status:r.status,models,company_diverse:uniqueCompanies,model_policy_pass:modelPolicy,expert_nonempty:expertNonempty,judge_nonempty:judgeNonempty,output_digest:digest,content_scrbed:true,max_tokens:512,elapsed_ms:Date.now()-started},ok?200:503);
+  return json({ok,business_e2e:true,cost_class:"paid-minimal",configured:true,task_id:taskId,http_status:r.status,models,company_diverse:uniqueCompanies,model_policy_pass:modelPolicy,expert_nonempty:expertNonempty,judge_nonempty:judgeNonempty,output_digest:digest,content_scrubbed:true,max_tokens:512,elapsed_ms:Date.now()-started},ok?200:503);
 }
 
 export default{async fetch(req,env,ctx){try{
