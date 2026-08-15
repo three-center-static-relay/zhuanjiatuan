@@ -1,7 +1,8 @@
 import base,{CenterGate as BaseCenterGate} from "./index.js";
+import {runGovernanceRelay} from "./governance-relay.js";
 
 const json=(x,s=200)=>Response.json(x,{status:s,headers:{"cache-control":"no-store"}});
-const INTERNAL_ONLY=new Set(["/v1/run","/v1/status","/v1/cancel","/v1/selftest"]);
+const INTERNAL_ONLY=new Set(["/v1/run","/v1/status","/v1/cancel","/v1/selftest","/v1/governance-assist"]);
 
 export class CenterGate{
   constructor(state,env){this.inner=new BaseCenterGate(state,env)}
@@ -72,6 +73,7 @@ async function selftest(env,ctx){
 export default{async fetch(req,env,ctx){try{
   const u=new URL(req.url);
   if(req.method==="POST"&&INTERNAL_ONLY.has(u.pathname)&&u.hostname!=="expert.internal")return json({ok:false,error:"POLICY_DENIED",message:"expert execution routes are service-binding internal only"},403);
+  if(req.method==="POST"&&u.pathname==="/v1/governance-assist")return await runGovernanceRelay(req,env);
   if(req.method==="POST"&&u.pathname==="/v1/cancel")return await cancel(req,env);
   if(req.method==="POST"&&u.pathname==="/v1/selftest")return await selftest(env,ctx);
   const r=await base.fetch(req,env,ctx);
