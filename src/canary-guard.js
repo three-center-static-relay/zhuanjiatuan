@@ -1,5 +1,5 @@
-import core,{CenterGate} from "./guard.js";
-export {CenterGate};
+import core,{CenterGate as CoreCenterGate} from "./guard.js";
+export class CenterGate extends CoreCenterGate {}
 const json=(x,s=200)=>Response.json(x,{status:s,headers:{"cache-control":"no-store"}});
 const allowed=id=>{const x=String(id||"").toLowerCase();return x&&!x.startsWith("openai/")&&!x.startsWith("anthropic/")&&!x.includes("claude")&&!x.includes("flash")&&!x.includes(":free")};
 async function digest(v){const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(JSON.stringify(v)));return[...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,"0")).join("")}
