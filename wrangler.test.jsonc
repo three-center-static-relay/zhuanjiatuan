@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "expert-worker-test",
-  "main": "src/guard.js",
+  "main": "src/governance-guard.js",
   "compatibility_date": "2026-08-14",
   "durable_objects": {"bindings": [{"name": "CENTER_GATE", "class_name": "CenterGate"}]},
   "exports": {"CenterGate": {"type": "durable-object", "storage": "sqlite"}},
