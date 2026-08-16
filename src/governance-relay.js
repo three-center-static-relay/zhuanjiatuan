@@ -4,6 +4,11 @@ const DEFAULT_MAX_TOKENS = 4096;
 const MAX_MAX_TOKENS = 16384;
 const MODEL_TIMEOUT_MS = 30000;
 const TOTAL_TIMEOUT_MS = 180000;
+const AUXILIARY_NO_TOOLS_SYSTEM = `AUXILIARY MODEL TOOL ISOLATION:
+- You have zero tool authority.
+- Never browse or search the web, call APIs, connectors, plugins, functions, or tools, execute code or commands, access repositories/files/external services, or initiate external actions.
+- Use only the prompt and evidence already supplied by the controlling system.
+- Never emit or request tool_calls/function_call. If external execution or fresh data is required, state that the controlling web GPT must perform it; do not simulate execution.`;
 
 const json = (body, status = 200) => Response.json(body, { status, headers: { "cache-control": "no-store" } });
 
@@ -73,7 +78,22 @@ async function paidReasoningCatalog(env, deadline) {
   return (payload?.data || []).filter(model => model?.id && nonFree(model));
 }
 
+function rejectToolUse(payload) {
+  const message = payload?.choices?.[0]?.message || null;
+  const finish = String(payload?.choices?.[0]?.finish_reason || "").toLowerCase();
+  const structured =
+    (Array.isArray(message?.tool_calls) ? message.tool_calls.length > 0 : Boolean(message?.tool_calls)) ||
+    Boolean(message?.function_call) ||
+    /tool_calls?|function_call/.test(finish);
+  const content = typeof message?.content === "string" ? message.content : "";
+  const textualInvocation = /<tool_call>|<function_call>|["']tool_calls?["']\s*:\s*\[/i.test(content);
+  if (structured || textualInvocation) {
+    throw Object.assign(new Error("AUXILIARY_TOOL_USE_FORBIDDEN"), { status: 502 });
+  }
+}
+
 function contentOf(payload) {
+  rejectToolUse(payload);
   const content = payload?.choices?.[0]?.message?.content;
   if (typeof content === "string" && content.trim()) return content.trim();
   if (Array.isArray(content)) {
@@ -111,9 +131,10 @@ export async function runGovernanceRelay(request, env) {
     const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
     if (!prompt) return json({ ok: false, error: "INVALID_REQUEST", message: "prompt required" }, 400);
     const maxTokens = Math.max(256, Math.min(MAX_MAX_TOKENS, Number(body.max_tokens || DEFAULT_MAX_TOKENS) || DEFAULT_MAX_TOKENS));
-    const system = typeof body.system === "string" && body.system.trim()
+    const suppliedSystem = typeof body.system === "string" && body.system.trim()
       ? body.system.trim()
       : "You are the governance copilot for a multi-center decision system. Assist the controlling web GPT with repository governance, code review, fault diagnosis, routing, policy interpretation, maintenance planning, and concise decision support. Do not claim to have executed actions you did not execute. Preserve system constraints and state uncertainty explicitly.";
+    const system = `${suppliedSystem}\n\n${AUXILIARY_NO_TOOLS_SYSTEM}`;
     const deadline = Date.now() + TOTAL_TIMEOUT_MS;
     const models = await paidReasoningCatalog(env, deadline);
     if (!models.length) return json({ ok: false, error: "NO_PAID_REASONING_MODEL_AVAILABLE" }, 503);
@@ -138,14 +159,15 @@ export async function runGovernanceRelay(request, env) {
           rank: rank + 1,
           content,
           usage: redact(payload?.usage || null),
-          attempts
+          attempts,
+          tool_access: "none"
         });
       } catch (error) {
         attempts.push({ rank: rank + 1, model, status: "failed", error: String(error?.message || error), elapsed_ms: Date.now() - started });
       }
     }
-    return json({ ok: false, error: "OPENROUTER_CHAIN_EXHAUSTED", web_gpt_fallback_required: true, attempts }, 503);
+    return json({ ok: false, error: "OPENROUTER_CHAIN_EXHAUSTED", web_gpt_fallback_required: true, attempts, tool_access: "none" }, 503);
   } catch (error) {
-    return json({ ok: false, error: String(error?.message || "INTERNAL_ERROR"), web_gpt_fallback_required: true }, error?.status || 500);
+    return json({ ok: false, error: String(error?.message || "INTERNAL_ERROR"), web_gpt_fallback_required: true, tool_access: "none" }, error?.status || 500);
   }
 }
