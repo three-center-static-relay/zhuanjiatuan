@@ -33,7 +33,9 @@ async function parseBody(request) {
   try { return JSON.parse(text); } catch { throw Object.assign(new Error("INVALID_REQUEST"), { status: 400 }); }
 }
 
-function nonFree(model) {
+function paidModel(model) {
+  const id = String(model?.id || "").toLowerCase();
+  if (!id || id.includes(":free")) return false;
   const p = model?.pricing || {};
   return Number(p.prompt || 0) > 0 || Number(p.completion || 0) > 0 || Number(p.request || 0) > 0;
 }
@@ -75,7 +77,7 @@ async function paidReasoningCatalog(env, deadline) {
   const payload = await fetchJsonBounded(url, {
     headers: { authorization: `Bearer ${env.OPENROUTER_API_KEY}`, accept: "application/json" }
   }, timeoutMs);
-  return (payload?.data || []).filter(model => model?.id && nonFree(model));
+  return (payload?.data || []).filter(paidModel);
 }
 
 function rejectToolUse(payload) {
@@ -137,7 +139,7 @@ export async function runGovernanceRelay(request, env) {
     const system = `${suppliedSystem}\n\n${AUXILIARY_NO_TOOLS_SYSTEM}`;
     const deadline = Date.now() + TOTAL_TIMEOUT_MS;
     const models = await paidReasoningCatalog(env, deadline);
-    if (!models.length) return json({ ok: false, error: "NO_PAID_REASONING_MODEL_AVAILABLE" }, 503);
+    if (!models.length) return json({ ok: false, error: "NO_PAID_REASONING_MODEL_AVAILABLE", model_tier: "paid-only", free_models_allowed: false }, 503);
     const attempts = [];
     for (let rank = 0; rank < models.length; rank++) {
       const model = models[rank].id;
@@ -155,6 +157,8 @@ export async function runGovernanceRelay(request, env) {
           ok: true,
           provider: "openrouter",
           selection: "paid-intelligence-high-to-low",
+          model_tier: "paid-only",
+          free_models_allowed: false,
           model,
           rank: rank + 1,
           content,
@@ -166,8 +170,8 @@ export async function runGovernanceRelay(request, env) {
         attempts.push({ rank: rank + 1, model, status: "failed", error: String(error?.message || error), elapsed_ms: Date.now() - started });
       }
     }
-    return json({ ok: false, error: "OPENROUTER_CHAIN_EXHAUSTED", web_gpt_fallback_required: true, attempts, tool_access: "none" }, 503);
+    return json({ ok: false, error: "OPENROUTER_CHAIN_EXHAUSTED", web_gpt_fallback_required: true, model_tier: "paid-only", free_models_allowed: false, attempts, tool_access: "none" }, 503);
   } catch (error) {
-    return json({ ok: false, error: String(error?.message || "INTERNAL_ERROR"), web_gpt_fallback_required: true, tool_access: "none" }, error?.status || 500);
+    return json({ ok: false, error: String(error?.message || "INTERNAL_ERROR"), web_gpt_fallback_required: true, model_tier: "paid-only", free_models_allowed: false, tool_access: "none" }, error?.status || 500);
   }
 }
