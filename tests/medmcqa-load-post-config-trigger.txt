@@ -1,0 +1,1 @@
+Trigger after fixed dataset load gate was configured. Zero-model-cost stage.
