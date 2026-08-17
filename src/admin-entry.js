@@ -9,6 +9,7 @@ const BENCH_PREFIX="/v1/diag/medmcqa-batch-7f2d9a31-20260817";
 const SUMMARY_PREFIX="/v1/diag/medmcqa-summary-5b61c0e4-20260817";
 const json=(body,status=200)=>Response.json(body,{status,headers:{"cache-control":"no-store"}});
 
+// PR #36 source-path trigger only; bounded benchmark runtime behavior is unchanged.
 async function readApp(path,env,ctx){
   const response=await app.fetch(new Request(`${ORIGIN}${path}`,{method:"GET"}),env,ctx);
   const body=await response.json().catch(()=>({ok:false,error:"ADMIN_BAD_JSON"}));
