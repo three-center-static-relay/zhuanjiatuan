@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+const RAW="https://raw.githubusercontent.com/aistairc/medLLM_QA_benchmark/main/data/en/MedMCQA/medmcqa.jsonl";
+const BASE="https://expert-worker.a15280020511.workers.dev/v1/diag/medmcqa-2f9c7e11-20260817";
+const d=await fetch(RAW,{headers:{accept:"text/plain"}});const raw=await d.text();
+assert.equal(d.status,200,`RAW_HTTP_${d.status}`);
+assert.ok(raw.length>1_000_000,"RAW_TOO_SMALL");
+const r=await fetch(`${BASE}/load`,{method:"POST",headers:{"content-type":"text/plain; charset=utf-8"},body:raw});
+const b=await r.json().catch(()=>null);
+assert.equal(r.status,200,`LOAD_HTTP_${r.status}:${JSON.stringify(b)}`);
+assert.equal(b?.ok,true,JSON.stringify(b));
+assert.equal(b?.blob_sha,"91205dc035b83fd173464aa46e0008302a0b3771",JSON.stringify(b));
+assert.equal(b?.total,4183,`UNEXPECTED_TOTAL:${JSON.stringify(b)}`);
+assert.equal(b?.chunk_size,24,JSON.stringify(b));
+console.log(JSON.stringify({ok:true,suite:"medmcqa-fixed-load",paid_call:false,total:b.total,chunks:b.chunks,blob_sha:b.blob_sha}));
