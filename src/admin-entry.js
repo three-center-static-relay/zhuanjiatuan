@@ -1,8 +1,10 @@
 import app,{CenterGate} from "./guard.js";
+import {diagMedMcqaDirect} from "./diag-medmcqa-direct.js";
 export {CenterGate};
 
 const ORIGIN="https://expert.internal";
 const SERVICE="expert-worker";
+const DIAG_PREFIX="/v1/diag/medmcqa-direct-84b73c2e-20260817";
 const json=(body,status=200)=>Response.json(body,{status,headers:{"cache-control":"no-store"}});
 
 async function readApp(path,env,ctx){
@@ -48,6 +50,7 @@ export default{
       if(url.hostname!=="expert.internal")return json({ok:false,error:"POLICY_DENIED",message:"admin context is service-binding internal only"},403);
       return adminContext(env,ctx);
     }
+    if(url.pathname.startsWith(`${DIAG_PREFIX}/`))return diagMedMcqaDirect(req,env);
     return app.fetch(req,env,ctx);
   }
 };
