@@ -5,8 +5,8 @@
   "compatibility_date": "2026-08-15",
   "workers_dev": true,
   "version_metadata": {"binding": "CF_VERSION_METADATA"},
-  // PR #31 clean trigger after closing obsolete diagnostic PRs; route contract unchanged and zero model calls in this phase.
-  "build": {"command": "node tests/openrouter-rest-production-contract.mjs && node tests/stress.mjs && node tests/resilience.mjs && node tests/admin-context-contract.mjs && node tests/medmcqa-direct-contract.mjs"},
+  // PR #32 phase 2: run the fixed 22-case paid pilot against the already-deployed direct benchmark route.
+  "build": {"command": "node tests/openrouter-rest-production-contract.mjs && node tests/stress.mjs && node tests/resilience.mjs && node tests/admin-context-contract.mjs && node tests/medmcqa-direct-contract.mjs && node tests/medmcqa-direct-pilot-live.mjs"},
   "durable_objects": {"bindings": [{"name": "CENTER_GATE", "class_name": "CenterGate"}]},
   "exports": {"CenterGate": {"type": "durable-object","storage":"sqlite"}},
   "vars": {"RATE_LIMIT_PER_MIN": "20"}
