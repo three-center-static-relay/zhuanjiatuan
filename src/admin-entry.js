@@ -27,7 +27,7 @@ async function runtimeSelftest(env,ctx){
   const cacheId=`${BENCHMARK_VERSION}-runtime-selftest`,cached=await store(env,cacheId);
   if(cached?.task?.benchmark_result)return json({...cached.task.benchmark_result,cached:true});
   const r=await app.fetch(new Request(`${ORIGIN}/v1/selftest`,{method:"POST",headers:{"content-type":"application/json"},body:"{}"}),env,ctx),body=await r.json().catch(()=>null);
-  const result={ok:r.ok&&body?.ok===true,runtime_selftest:true,http_status:r.status,error:body?.error||null,business_e2e:body?.business_e2e===true,configured:body?.configured===true,model_policy_pass:body?.model_policy_pass===true,company_diverse:body?.company_diverse===true,expert_nonempty:body?.expert_nonempty===true,judge_nonempty:body?.judge_nonempty===true,models:body?.models||[],elapsed_ms:body?.elapsed_ms||null};
+  const result={ok:r.ok&&body?.ok===true,runtime_selftest:true,http_status:r.status,inner_http_status:Number(body?.http_status||0)||null,error:body?.error||null,business_e2e:body?.business_e2e===true,configured:body?.configured===true,model_policy_pass:body?.model_policy_pass===true,company_diverse:body?.company_diverse===true,expert_nonempty:body?.expert_nonempty===true,judge_nonempty:body?.judge_nonempty===true,models:body?.models||[],elapsed_ms:body?.elapsed_ms||null};
   if(result.ok)await store(env,cacheId,"POST",{status:"benchmark-completed",benchmark_result:result,answers:null,judge:null}).catch(()=>{});
   return json(result,r.status||500);
 }
