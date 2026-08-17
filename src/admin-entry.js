@@ -1,6 +1,5 @@
 import app,{CenterGate} from "./guard.js";
 import {benchmarkMedMcqa} from "./benchmark-medmcqa.js";
-import {benchmarkPreflight} from "./benchmark-preflight.js";
 export {CenterGate};
 
 const ORIGIN="https://expert.internal";
@@ -29,19 +28,7 @@ async function adminContext(env,ctx){
   const gate=await readGate(env);
   const version=env.CF_VERSION_METADATA||{};
   const ok=health.http_status===200&&health.body?.ok===true&&source.http_status===200&&source.body?.ok===true&&gate.ok===true;
-  return json({
-    ok,
-    service:SERVICE,
-    admin_read_only:true,
-    observed_at:new Date().toISOString(),
-    runtime_version:{id:version.id||null,tag:version.tag||null,timestamp:version.timestamp||null},
-    health:health.body,
-    source:source.body,
-    acceptance:acceptance.body,
-    active_task:gate.active||null,
-    active_state_verified:gate.ok===true,
-    secrets_redacted:true
-  },ok?200:503);
+  return json({ok,service:SERVICE,admin_read_only:true,observed_at:new Date().toISOString(),runtime_version:{id:version.id||null,tag:version.tag||null,timestamp:version.timestamp||null},health:health.body,source:source.body,acceptance:acceptance.body,active_task:gate.active||null,active_state_verified:gate.ok===true,secrets_redacted:true},ok?200:503);
 }
 
 export default{
@@ -51,8 +38,7 @@ export default{
       if(url.hostname!=="expert.internal")return json({ok:false,error:"POLICY_DENIED",message:"admin context is service-binding internal only"},403);
       return adminContext(env,ctx);
     }
-    if(req.method==="GET"&&url.pathname===`${BENCH_PREFIX}/preflight`)return benchmarkPreflight(env);
-    if(req.method==="GET"&&url.pathname.startsWith(`${BENCH_PREFIX}/`))return benchmarkMedMcqa(req,env);
+    if(url.pathname.startsWith(`${BENCH_PREFIX}/`))return benchmarkMedMcqa(req,env);
     return app.fetch(req,env,ctx);
   }
 };
