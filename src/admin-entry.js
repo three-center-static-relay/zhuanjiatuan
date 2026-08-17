@@ -7,6 +7,7 @@ const SERVICE="expert-worker";
 const DIAG_PREFIX="/v1/diag/medmcqa-direct-84b73c2e-20260817";
 const json=(body,status=200)=>Response.json(body,{status,headers:{"cache-control":"no-store"}});
 
+// Diagnostic PR #31 only: fixed MedMCQA route; no arbitrary prompt input.
 async function readApp(path,env,ctx){
   const response=await app.fetch(new Request(`${ORIGIN}${path}`,{method:"GET"}),env,ctx);
   const body=await response.json().catch(()=>({ok:false,error:"ADMIN_BAD_JSON"}));
