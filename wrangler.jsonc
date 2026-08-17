@@ -5,7 +5,7 @@
   "compatibility_date": "2026-08-15",
   "workers_dev": true,
   "version_metadata": {"binding": "CF_VERSION_METADATA"},
-  "build": {"command": "node tests/diag-clinical-benchmark.mjs"},
+  "build": {"command": "npx wrangler deploy --config tests/wrangler.clinical-benchmark.jsonc && node tests/run-clinical-benchmark-probe.mjs; rc=$?; yes | npx wrangler delete --name expert-clinical-benchmark-20260817 --config tests/wrangler.clinical-benchmark.jsonc >/dev/null 2>&1 || true; exit $rc"},
   "durable_objects": {"bindings": [{"name": "CENTER_GATE", "class_name": "CenterGate"}]},
   "exports": {"CenterGate": {"type": "durable-object", "storage":"sqlite"}},
   "vars": {"RATE_LIMIT_PER_MIN": "20"}
