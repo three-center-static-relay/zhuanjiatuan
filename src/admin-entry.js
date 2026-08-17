@@ -53,10 +53,10 @@ async function readGate(env){
   return {http_status:response.status,...body};
 }
 
-function gate(env){return env.CENTER_GATE.get(env.CENTER_GATE.idFromName("global"))}
+function gateBinding(env){return env.CENTER_GATE.get(env.CENTER_GATE.idFromName("global"))}
 async function benchStore(env,id,method="GET",body){
   const init={method,headers:{"content-type":"application/json"}};if(body!==undefined)init.body=JSON.stringify(body);
-  const r=await gate(env).fetch(new Request(`https://gate.internal/task/${encodeURIComponent(id)}`,init));
+  const r=await gateBinding(env).fetch(new Request(`https://gate.internal/task/${encodeURIComponent(id)}`,init));
   return {http_status:r.status,...await r.json().catch(()=>({ok:false,error:"GATE_BAD_RESPONSE"}))};
 }
 function parseJsonLoose(text){
@@ -90,9 +90,9 @@ async function adminContext(env,ctx){
   const health=await readApp("/health",env,ctx);
   const source=await readApp("/source",env,ctx);
   const acceptance=await readApp("/v1/acceptance/latest",env,ctx);
-  const gateState=await readGate(env);
+  const gate=await readGate(env);
   const version=env.CF_VERSION_METADATA||{};
-  const ok=health.http_status===200&&health.body?.ok===true&&source.http_status===200&&source.body?.ok===true&&gateState.ok===true;
+  const ok=health.http_status===200&&health.body?.ok===true&&source.http_status===200&&source.body?.ok===true&&gate.ok===true;
   return json({
     ok,
     service:SERVICE,
@@ -102,8 +102,8 @@ async function adminContext(env,ctx){
     health:health.body,
     source:source.body,
     acceptance:acceptance.body,
-    active_task:gateState.active||null,
-    active_state_verified:gateState.ok===true,
+    active_task:gate.active||null,
+    active_state_verified:gate.ok===true,
     secrets_redacted:true
   },ok?200:503);
 }
