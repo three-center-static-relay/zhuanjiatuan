@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+const BASE="https://expert-worker.a15280020511.workers.dev/v1/diag/medmcqa-2f9c7e11-20260817";
+const r=await fetch(`${BASE}/chunk?offset=0&length=24`,{headers:{accept:"application/json"}});
+const b=await r.json().catch(()=>null);
+assert.equal(r.status,200,`HTTP_${r.status}:${JSON.stringify(b)}`);
+assert.equal(b?.ok,true,JSON.stringify(b));
+assert.equal(b?.n,24,JSON.stringify(b));
+assert.ok(Array.isArray(b?.models)&&b.models.length===2,JSON.stringify(b));
+assert.notEqual(String(b.models[0]).split('/')[0].toLowerCase(),String(b.models[1]).split('/')[0].toLowerCase(),JSON.stringify(b));
+assert.ok(Number(b.completed)>=18,`LOW_EXECUTION_SUCCESS:${JSON.stringify(b)}`);
+assert.ok(Number(b.parsed)>=18,`LOW_PARSE_RATE:${JSON.stringify(b)}`);
+console.log(JSON.stringify({ok:true,suite:"medmcqa-paid-pilot",n:b.n,correct:b.correct,completed:b.completed,parsed:b.parsed,cost:b.cost,models:b.models,cached:b.cached}));
