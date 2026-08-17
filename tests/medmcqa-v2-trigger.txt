@@ -1,0 +1,1 @@
+Clean deployment trigger for verified MedMCQA blind benchmark v2. Temporary diagnostic only; do not merge.
