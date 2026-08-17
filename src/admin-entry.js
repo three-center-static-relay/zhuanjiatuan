@@ -1,10 +1,12 @@
 import app,{CenterGate} from "./guard.js";
 import {benchmarkMedMcqa} from "./benchmark-medmcqa.js";
+import {benchmarkMedMcqaBlockLoader} from "./benchmark-medmcqa-block-loader.js";
 export {CenterGate};
 
 const ORIGIN="https://expert.internal";
 const SERVICE="expert-worker";
 const BENCH_PREFIX="/v1/diag/medmcqa-2f9c7e11-20260817";
+const LOADER_PREFIX="/v1/diag/medmcqa-loader-7c1d6b4a-20260817";
 const json=(body,status=200)=>Response.json(body,{status,headers:{"cache-control":"no-store"}});
 
 async function readApp(path,env,ctx){
@@ -38,6 +40,7 @@ export default{
       if(url.hostname!=="expert.internal")return json({ok:false,error:"POLICY_DENIED",message:"admin context is service-binding internal only"},403);
       return adminContext(env,ctx);
     }
+    if(url.pathname.startsWith(`${LOADER_PREFIX}/`))return benchmarkMedMcqaBlockLoader(req,env);
     if(url.pathname.startsWith(`${BENCH_PREFIX}/`))return benchmarkMedMcqa(req,env);
     return app.fetch(req,env,ctx);
   }
