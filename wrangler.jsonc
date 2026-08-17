@@ -5,8 +5,8 @@
   "compatibility_date": "2026-08-15",
   "workers_dev": true,
   "version_metadata": {"binding": "CF_VERSION_METADATA"},
-  // Diagnostic gate: load the SHA-pinned 4,183-row MedMCQA gold mirror in verified blocks before any paid benchmark execution.
-  "build": {"command": "node tests/openrouter-rest-production-contract.mjs && node tests/stress.mjs && node tests/resilience.mjs && node tests/admin-context-contract.mjs && node tests/medmcqa-benchmark-contract.mjs && node tests/medmcqa-block-loader-contract.mjs && node tests/medmcqa-block-load-live.mjs"},
+  // Diagnostic isolation: validate the complete fixed gold mirror locally; no Durable Object writes and no model calls.
+  "build": {"command": "node tests/openrouter-rest-production-contract.mjs && node tests/stress.mjs && node tests/resilience.mjs && node tests/admin-context-contract.mjs && node tests/medmcqa-benchmark-contract.mjs && node tests/medmcqa-block-loader-contract.mjs && node tests/medmcqa-local-gold-validate.mjs"},
   "durable_objects": {"bindings": [{"name": "CENTER_GATE", "class_name": "CenterGate"}]},
   "exports": {"CenterGate": {"type": "durable-object", "storage":"sqlite"}},
   "vars": {"RATE_LIMIT_PER_MIN": "20"}
