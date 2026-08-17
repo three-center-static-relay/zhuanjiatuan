@@ -1,8 +1,12 @@
 import app,{CenterGate} from "./guard.js";
+import {benchmarkMedMcqaBatch} from "./benchmark-medmcqa-batch.js";
+import {benchmarkSummary} from "./benchmark-medmcqa-summary.js";
 export {CenterGate};
 
 const ORIGIN="https://expert.internal";
 const SERVICE="expert-worker";
+const BENCH_PREFIX="/v1/diag/medmcqa-batch-7f2d9a31-20260817";
+const SUMMARY_PREFIX="/v1/diag/medmcqa-summary-5b61c0e4-20260817";
 const json=(body,status=200)=>Response.json(body,{status,headers:{"cache-control":"no-store"}});
 
 async function readApp(path,env,ctx){
@@ -26,19 +30,7 @@ async function adminContext(env,ctx){
   const gate=await readGate(env);
   const version=env.CF_VERSION_METADATA||{};
   const ok=health.http_status===200&&health.body?.ok===true&&source.http_status===200&&source.body?.ok===true&&gate.ok===true;
-  return json({
-    ok,
-    service:SERVICE,
-    admin_read_only:true,
-    observed_at:new Date().toISOString(),
-    runtime_version:{id:version.id||null,tag:version.tag||null,timestamp:version.timestamp||null},
-    health:health.body,
-    source:source.body,
-    acceptance:acceptance.body,
-    active_task:gate.active||null,
-    active_state_verified:gate.ok===true,
-    secrets_redacted:true
-  },ok?200:503);
+  return json({ok,service:SERVICE,admin_read_only:true,observed_at:new Date().toISOString(),runtime_version:{id:version.id||null,tag:version.tag||null,timestamp:version.timestamp||null},health:health.body,source:source.body,acceptance:acceptance.body,active_task:gate.active||null,active_state_verified:gate.ok===true,secrets_redacted:true},ok?200:503);
 }
 
 export default{
@@ -48,6 +40,8 @@ export default{
       if(url.hostname!=="expert.internal")return json({ok:false,error:"POLICY_DENIED",message:"admin context is service-binding internal only"},403);
       return adminContext(env,ctx);
     }
+    if(req.method==="GET"&&url.pathname.startsWith(`${SUMMARY_PREFIX}/`))return benchmarkSummary(req,env);
+    if(url.pathname.startsWith(`${BENCH_PREFIX}/`))return benchmarkMedMcqaBatch(req,env);
     return app.fetch(req,env,ctx);
   }
 };

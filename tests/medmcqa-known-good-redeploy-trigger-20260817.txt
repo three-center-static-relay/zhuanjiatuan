@@ -1,0 +1,1 @@
+Non-runtime trigger only. Re-deploy exact known-good MedMCQA runner commit e164aa84 before blind execution.
