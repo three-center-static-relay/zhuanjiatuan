@@ -1,6 +1,7 @@
 {
   "name": "expert-worker",
   "private": true,
-  "scripts": {"stress": "node tests/stress.mjs"},
+  "type": "module",
+  "scripts": {"stress": "node tests/stress.mjs", "test:capability-manifest": "node tests/capability-manifest-contract.mjs"},
   "devDependencies": {"wrangler": "^4.0.0", "msw": "^2.0.0"}
 }
