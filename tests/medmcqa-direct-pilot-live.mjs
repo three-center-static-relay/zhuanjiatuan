@@ -1,0 +1,17 @@
+import assert from "node:assert/strict";
+const BASE="https://expert-worker.a15280020511.workers.dev/v1/diag/medmcqa-direct-84b73c2e-20260817";
+const r=await fetch(`${BASE}/run?offset=0`,{headers:{accept:"application/json"}});
+const b=await r.json().catch(()=>null);
+assert.equal(r.status,200,`HTTP_${r.status}:${JSON.stringify(b)}`);
+assert.equal(b?.ok,true,`NOT_OK:${JSON.stringify(b)}`);
+assert.equal(b?.offset,0,JSON.stringify(b));
+assert.equal(b?.n,22,JSON.stringify(b));
+assert.equal(b?.source_commit,"614599e5042052a374fca74590a2dd95c80a56b3",JSON.stringify(b));
+assert.equal(b?.source_blob_sha,"91205dc035b83fd173464aa46e0008302a0b3771",JSON.stringify(b));
+assert.ok(Array.isArray(b?.models)&&b.models.length===2,`MODELS:${JSON.stringify(b)}`);
+assert.ok(Array.isArray(b?.companies)&&b.companies.length===2&&new Set(b.companies).size===2,`COMPANIES:${JSON.stringify(b)}`);
+assert.ok(Number.isFinite(Number(b?.correct)),`CORRECT:${JSON.stringify(b)}`);
+assert.ok(Number(b.correct)>=0&&Number(b.correct)<=22,`CORRECT_RANGE:${JSON.stringify(b)}`);
+assert.ok(Number(b?.completed)>=18,`EXECUTION_TOO_LOW:${JSON.stringify(b)}`);
+assert.ok(Number(b?.parsed)>=18,`PARSE_TOO_LOW:${JSON.stringify(b)}`);
+console.log(JSON.stringify({ok:true,suite:"medmcqa-direct-pilot-live",paid_call:true,offset:b.offset,n:b.n,correct:b.correct,completed:b.completed,parsed:b.parsed,strict_accuracy:b.strict_accuracy,completed_accuracy:b.completed_accuracy,execution_success_rate:b.execution_success_rate,parse_rate:b.parse_rate,cost:b.cost,models:b.models,companies:b.companies,cached:Boolean(b.cached),errors:b.errors}));
