@@ -1,0 +1,1 @@
+Final zero-cost post-PR trigger after strict whole-batch failure accounting was added.
