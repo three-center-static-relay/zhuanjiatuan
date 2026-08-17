@@ -23,7 +23,16 @@ async function readGate(env){
 function gateBinding(env){return env.CENTER_GATE.get(env.CENTER_GATE.idFromName("global"))}
 async function store(env,id,method="GET",body){const init={method,headers:{"content-type":"application/json"}};if(body!==undefined)init.body=JSON.stringify(body);const r=await gateBinding(env).fetch(new Request(`https://gate.internal/task/${encodeURIComponent(id)}`,init));return{http_status:r.status,...await r.json().catch(()=>({ok:false,error:"GATE_BAD_RESPONSE"}))}}
 function score(def,text){const checks=def.checks.map(([name,re])=>({name,ok:re.test(String(text||""))}));return{score:Math.round(100*checks.filter(x=>x.ok).length/checks.length),checks}}
+async function runtimeSelftest(env,ctx){
+  const cacheId=`${BENCHMARK_VERSION}-runtime-selftest`,cached=await store(env,cacheId);
+  if(cached?.task?.benchmark_result)return json({...cached.task.benchmark_result,cached:true});
+  const r=await app.fetch(new Request(`${ORIGIN}/v1/selftest`,{method:"POST",headers:{"content-type":"application/json"},body:"{}"}),env,ctx),body=await r.json().catch(()=>null);
+  const result={ok:r.ok&&body?.ok===true,runtime_selftest:true,http_status:r.status,error:body?.error||null,business_e2e:body?.business_e2e===true,configured:body?.configured===true,model_policy_pass:body?.model_policy_pass===true,company_diverse:body?.company_diverse===true,expert_nonempty:body?.expert_nonempty===true,judge_nonempty:body?.judge_nonempty===true,models:body?.models||[],elapsed_ms:body?.elapsed_ms||null};
+  if(result.ok)await store(env,cacheId,"POST",{status:"benchmark-completed",benchmark_result:result,answers:null,judge:null}).catch(()=>{});
+  return json(result,r.status||500);
+}
 async function benchmark(caseId,env,ctx){
+  if(caseId==="runtime_selftest")return runtimeSelftest(env,ctx);
   const def=CASES[caseId];if(!def)return json({ok:false,error:"BENCHMARK_CASE_NOT_FOUND"},404);
   const cacheId=`${BENCHMARK_VERSION}-${caseId}`,cached=await store(env,cacheId);
   if(cached?.task?.benchmark_result)return json({...cached.task.benchmark_result,cached:true});
