@@ -1,0 +1,9 @@
+const SESSION_ID="medmcqa-blind-session-v3-20260817";
+const WAVE_IDS=[0,1,2,3].map(x=>`medmcqa-v3-wave-${x}`);
+const PILOT_ID="pilot-v3b";
+const json=(x,s=200)=>Response.json(x,{status:s,headers:{"cache-control":"no-store"}});
+function gate(env){return env.CENTER_GATE.get(env.CENTER_GATE.idFromName("global"))}
+async function read(env,id){const r=await gate(env).fetch(new Request(`https://gate.internal/task/${encodeURIComponent(id)}`,{method:"GET"}));const b=await r.json().catch(()=>null);return b?.task||null}
+function wilson(correct,n){if(!n)return{low:null,high:null};const z=1.959963984540054,p=correct/n,den=1+z*z/n,center=(p+z*z/(2*n))/den,half=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n))/den;return{low:Math.max(0,center-half),high:Math.min(1,center+half)}}
+async function aggregate(env,ids){let n=0,correct=0,completed=0,parsed=0,cost=0,whole=0;const found=[];for(const id of ids){const t=await read(env,`${SESSION_ID}:wave:${id}`),w=t?.benchmark_wave;if(!w)continue;found.push(id);n+=Number(w.n||0);correct+=Number(w.correct||0);completed+=Number(w.completed||0);parsed+=Number(w.parsed||0);cost+=Number(w.cost||0);whole+=Number(w.whole_batch_failures||0)}return{found,n,correct,completed,parsed,cost,whole_batch_failures:whole,strict_accuracy:n?correct/n:null,completed_accuracy:completed?correct/completed:null,execution_success_rate:n?completed/n:null,parse_rate:n?parsed/n:null,wilson95:wilson(correct,n)}}
+export async function benchmarkSummary(req,env){const u=new URL(req.url);if(u.pathname.endsWith("/overall")){const a=await aggregate(env,WAVE_IDS);return json({ok:true,benchmark:"medmcqa-deterministic-hash-sample",sample_target:4000,waves_expected:4,waves_complete:a.found.length,complete:a.found.length===4&&a.n===4000,...a})}if(u.pathname.endsWith("/pilot")){const a=await aggregate(env,[PILOT_ID]);return json({ok:true,benchmark:"medmcqa-pilot",complete:a.found.length===1,...a})}return json({ok:false,error:"NOT_FOUND"},404)}
