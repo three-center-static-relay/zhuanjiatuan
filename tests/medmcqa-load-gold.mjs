@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+const DATA="https://raw.githubusercontent.com/aistairc/medLLM_QA_benchmark/main/data/en/MedMCQA/medmcqa.jsonl";
+const LOAD="https://expert-worker.a15280020511.workers.dev/v1/diag/medmcqa-2f9c7e11-20260817/load";
+const rawResp=await fetch(DATA,{headers:{accept:"text/plain"}});
+assert.equal(rawResp.status,200,`DATA_HTTP_${rawResp.status}`);
+const raw=await rawResp.text();
+assert.ok(raw.length>100000,`DATA_TOO_SMALL_${raw.length}`);
+const r=await fetch(LOAD,{method:"POST",headers:{"content-type":"text/plain; charset=utf-8",accept:"application/json"},body:raw});
+const b=await r.json().catch(()=>null);
+assert.equal(r.status,200,`LOAD_HTTP_${r.status}:${JSON.stringify(b)}`);
+assert.equal(b?.ok,true,`LOAD_NOT_OK:${JSON.stringify(b)}`);
+assert.equal(b?.blob_sha,"91205dc035b83fd173464aa46e0008302a0b3771",JSON.stringify(b));
+assert.ok(Number(b?.total)>=2000,`TOTAL_TOO_LOW:${JSON.stringify(b)}`);
+assert.equal(b?.chunk_size,24,JSON.stringify(b));
+console.log(JSON.stringify({ok:true,suite:"medmcqa-gold-load",total:b.total,chunks:b.chunks,blob_sha:b.blob_sha,dataset:b.dataset,paid_call:false}));
