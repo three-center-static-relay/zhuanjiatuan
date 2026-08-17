@@ -1,5 +1,6 @@
 import app,{CenterGate} from "./guard.js";
 import {benchmarkMedMcqa} from "./benchmark-medmcqa.js";
+import {benchmarkPreflight} from "./benchmark-preflight.js";
 export {CenterGate};
 
 const ORIGIN="https://expert.internal";
@@ -50,6 +51,7 @@ export default{
       if(url.hostname!=="expert.internal")return json({ok:false,error:"POLICY_DENIED",message:"admin context is service-binding internal only"},403);
       return adminContext(env,ctx);
     }
+    if(req.method==="GET"&&url.pathname===`${BENCH_PREFIX}/preflight`)return benchmarkPreflight(env);
     if(req.method==="GET"&&url.pathname.startsWith(`${BENCH_PREFIX}/`))return benchmarkMedMcqa(req,env);
     return app.fetch(req,env,ctx);
   }
