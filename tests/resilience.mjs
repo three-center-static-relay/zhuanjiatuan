@@ -4,6 +4,7 @@ import { http, HttpResponse, delay } from "msw";
 import { setupServer } from "msw/node";
 
 const watchdog=setTimeout(()=>{console.error("RESILIENCE_WATCHDOG_TIMEOUT");process.exit(124)},40000);
+const CHAT_ENDPOINT="https://gateway.ai.cloudflare.com/v1/e3aec027af13c557bbcb831d29c1e7b4/four-center-ai-gateway/openrouter/chat/completions";
 let catalogMode="full",calls=[];
 const fullCatalog=[
   {id:"google/gemini-a",pricing:{prompt:"0.000001",completion:"0.000001"}},
@@ -17,7 +18,11 @@ const fullCatalog=[
 ];
 const network=setupServer(
   http.get("https://openrouter.ai/api/v1/models",()=>HttpResponse.json({data:catalogMode==="short"?fullCatalog.slice(0,3):fullCatalog})),
-  http.post("https://openrouter.ai/api/v1/chat/completions",async({request})=>{
+  http.post(CHAT_ENDPOINT,async({request})=>{
+    assert.equal(request.headers.get("cf-aig-authorization"),"Bearer test-gateway-token");
+    assert.equal(request.headers.get("cf-aig-skip-cache"),"true");
+    assert.equal(request.headers.get("cf-aig-collect-log"),"false");
+    assert.equal(request.headers.get("cf-aig-max-attempts"),"1");
     const b=await request.json();
     const text=(b.messages||[]).map(x=>String(x?.content||"")).join("\n");
     const isJudge=text.includes("You are the final judge")||text.includes("Independent expert answers:");
