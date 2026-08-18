@@ -1,4 +1,5 @@
 import { aiGatewayConfigured, aiGatewayRequestHeaders, dynamicChatEndpoint, dynamicRouteModel } from "./ai-gateway.js";
+import { readTextBounded } from "./bounded-response.js";
 
 const MAX_BODY_BYTES = 65536;
 const MAX_UPSTREAM_BYTES = 1500000;
@@ -77,8 +78,7 @@ async function callRoute(env, messages, maxTokens) {
         max_tokens: maxTokens
       })
     });
-    const raw = await response.text();
-    if (new TextEncoder().encode(raw).length > MAX_UPSTREAM_BYTES) throw Object.assign(new Error("UPSTREAM_RESPONSE_TOO_LARGE"), { status: 502 });
+    const raw = await readTextBounded(response, MAX_UPSTREAM_BYTES);
     let payload = null;
     if (raw) {
       try { payload = JSON.parse(raw); } catch { throw Object.assign(new Error("UPSTREAM_BAD_JSON"), { status: 502 }); }
