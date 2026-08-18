@@ -11,8 +11,14 @@ for(const capability of manifest.capabilities){
   assert.ok(capability.operations.length>0);
   assert.equal(capability.write_scope,"none");
   assert.equal(capability.network_scope,"openrouter-only");
-  assert.equal(capability.trust.level,"T2");
+  assert.equal(capability.trust.level,"T0");
+  assert.equal(capability.trust.status,"unverified");
+  assert.equal(capability.verification.status,"configured-unverified");
+  assert.equal(capability.verification.receipt_digest,null);
+  assert.equal(capability.last_verified,null);
+  assert.equal(capability.cost.unit_cost,null);
   assert.equal(ids.has(capability.id),false);ids.add(capability.id);
 }
+assert.equal(manifest.provider_summary.runtime_verified,0);
 assert.doesNotMatch(JSON.stringify(manifest),/token|password|authorization|cookie|api.?key/i);
 console.log(JSON.stringify({ok:true,suite:"capability-manifest-contract",center:"expert",capability_count:manifest.capabilities.length}));
