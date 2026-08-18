@@ -39,17 +39,10 @@ export function dynamicRouteModel(env) {
   return `dynamic/${route}`;
 }
 
-export function routeMetadata(env, metadata = {}) {
-  const selected = {
-    center: "expert",
-    dynamic_route: aiGatewayRoute(env),
-    expert_slot: String(metadata?.expert_slot || "").trim(),
-    task_domain: String(metadata?.task_domain || "general").trim(),
-    reasoning_depth: String(metadata?.reasoning_depth || "standard").trim()
-  };
-  if (!selected.expert_slot) throw configurationError("AI_GATEWAY_EXPERT_SLOT_REQUIRED", 500);
-  if (Object.keys(selected).length !== MAX_CUSTOM_METADATA) throw configurationError("AI_GATEWAY_METADATA_LIMIT_MISMATCH", 500);
-  return selected;
+export function routeMetadata(_env, metadata = {}) {
+  const entries = Object.entries(metadata).filter(([,value]) => value !== undefined && value !== null);
+  if (entries.length !== MAX_CUSTOM_METADATA) throw configurationError("AI_GATEWAY_METADATA_LIMIT_MISMATCH", 500);
+  return Object.fromEntries(entries.map(([key,value]) => [String(key), String(value)]));
 }
 
 export function aiGatewayRequestHeaders(env, timeoutMs, metadata = {}) {
@@ -78,6 +71,6 @@ export function aiGatewayDescriptor(env) {
     worker_retries: 0,
     dynamic_routing: true,
     custom_metadata_limit: MAX_CUSTOM_METADATA,
-    routed_metadata: ["center","dynamic_route","expert_slot","task_domain","reasoning_depth"]
+    routed_metadata: ["stage","lane","capability","depth","cost_mode"]
   };
 }
