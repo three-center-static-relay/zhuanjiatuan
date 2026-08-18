@@ -1,61 +1,56 @@
 import assert from "node:assert/strict";
 import { createTestHarness } from "wrangler";
-import { http, HttpResponse, delay } from "msw";
+import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 
 const watchdog=setTimeout(()=>{console.error("RESILIENCE_WATCHDOG_TIMEOUT");process.exit(124)},40000);
-const CHAT_ENDPOINT="https://gateway.ai.cloudflare.com/v1/e3aec027af13c557bbcb831d29c1e7b4/test/openrouter/chat/completions";
-let catalogMode="full",calls=[];
-const fullCatalog=[
-  {id:"google/gemini-a",pricing:{prompt:"0.000001",completion:"0.000001"}},
-  {id:"google/gemini-b",pricing:{prompt:"0.000001",completion:"0.000001"}},
-  {id:"deepseek/r1",pricing:{prompt:"0.000001",completion:"0.000001"}},
-  {id:"mistralai/magistral",pricing:{prompt:"0.000001",completion:"0.000001"}},
-  {id:"qwen/qwen3",pricing:{prompt:"0.000001",completion:"0.000001"}},
-  {id:"x-ai/grok",pricing:{prompt:"0.000001",completion:"0.000001"}},
-  {id:"cohere/command",pricing:{prompt:"0.000001",completion:"0.000001"}},
-  {id:"meta-llama/llama",pricing:{prompt:"0.000001",completion:"0.000001"}}
-];
+const CHAT_ENDPOINT="https://gateway.ai.cloudflare.com/v1/e3aec027af13c557bbcb831d29c1e7b4/test/compat/chat/completions";
+const normal={"expert-1":"google/gemini-pro","expert-2":"deepseek/r1","expert-3":"mistralai/magistral",judge:"qwen/qwen3"};
+let mode="normal",calls=[];
 const network=setupServer(
-  http.get("https://openrouter.ai/api/v1/models",()=>HttpResponse.json({data:catalogMode==="short"?fullCatalog.slice(0,3):fullCatalog})),
   http.post(CHAT_ENDPOINT,async({request})=>{
-    assert.equal(request.headers.get("cf-aig-authorization"),"Bearer test-gateway-token");
-    assert.equal(request.headers.get("cf-aig-skip-cache"),null);
-    assert.equal(request.headers.get("cf-aig-collect-log"),null);
-    assert.equal(request.headers.get("cf-aig-max-attempts"),"1");
-    const b=await request.json();
-    const text=(b.messages||[]).map(x=>String(x?.content||"")).join("\n");
-    const isJudge=text.includes("You are the final judge")||text.includes("Independent expert answers:");
-    calls.push({model:b.model,isJudge});
-    if(text.includes("SLOW_PRIMARY")&&b.model==="google/gemini-a"){await delay(1500);return HttpResponse.json({choices:[{message:{content:"late"}}]})}
-    if(text.includes("SLOW_JUDGE")&&isJudge&&b.model==="qwen/qwen3"){await delay(1500);return HttpResponse.json({choices:[{message:{content:"late judge"}}]})}
-    return HttpResponse.json({choices:[{message:{content:isJudge?"judge ok":"expert ok"}}],usage:{prompt_tokens:1,completion_tokens:1,total_tokens:2}})
+    const body=await request.json(),metadata=JSON.parse(request.headers.get("cf-aig-metadata")||"{}"),slot=metadata.expert_slot;
+    assert.equal(body.model,"dynamic/expert-panel-v1");
+    assert.ok(["expert-1","expert-2","expert-3","judge"].includes(slot));
+    let model=normal[slot],provider="openrouter";
+    if(mode==="duplicate"&&slot==="expert-2")model="google/gemini-backup";
+    if(mode==="forbidden"&&slot==="expert-1")model="anthropic/claude-opus";
+    if(mode==="same-family-fallback"&&slot==="expert-1")model="google/gemini-pro-backup";
+    calls.push({slot,model});
+    const payload={model,choices:[{message:{content:slot==="judge"?"judge ok":"expert ok"}}],usage:{prompt_tokens:1,completion_tokens:1,total_tokens:2}};
+    if(mode==="missing-metadata"&&slot==="expert-1")return HttpResponse.json(payload);
+    return HttpResponse.json(payload,{headers:{"cf-aig-model":model,"cf-aig-provider":provider}});
   })
 );
 network.listen({onUnhandledRequest:"error"});
 const server=createTestHarness({workers:[{configPath:"./wrangler.test.jsonc"}]});
-async function post(body){const r=await server.fetch("https://expert.internal/v1/run",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});return{status:r.status,body:await r.json().catch(()=>null)}}
-async function reset(){await server.reset();catalogMode="full";calls=[]}
+async function post(taskId,count=4){const response=await server.fetch("https://expert.internal/v1/run",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({task_id:taskId,prompt:"Evaluate resilient routing",model_count:count,timeout_seconds:20,max_tokens:64})});return{status:response.status,body:await response.json().catch(()=>null)}}
+async function reset(nextMode="normal"){await server.reset();mode=nextMode;calls=[]}
 let exitCode=0;
 try{
   await server.listen();
-  await reset();
-  const same=await post({task_id:"same-company",prompt:"NORMAL",model_count:4,models:["google/gemini-a","google/gemini-b","deepseek/r1","mistralai/magistral","qwen/qwen3"],timeout_seconds:30,max_tokens:64});
-  assert.equal(same.status,200);assert.equal(same.body.models.length,4);assert.equal(new Set(same.body.models.map(x=>x.split("/")[0])).size,4);assert.equal(same.body.models.filter(x=>x.startsWith("google/")).length,1);
 
   await reset();
-  const slow=await post({task_id:"slow-primary",prompt:"SLOW_PRIMARY",model_count:4,models:["google/gemini-a","deepseek/r1","mistralai/magistral","qwen/qwen3"],model_timeout_seconds:1,judge_timeout_seconds:2,timeout_seconds:20,max_tokens:64});
-  assert.equal(slow.status,200);assert.equal(slow.body.models.length,4);assert.equal(new Set(slow.body.models.map(x=>x.split("/")[0])).size,4);assert.equal(slow.body.execution_receipt[0].replaced,true);assert.equal(slow.body.execution_receipt[0].attempts[0].error,"UPSTREAM_TIMEOUT");assert.notEqual(slow.body.execution_receipt[0].final_model,"google/gemini-a");
+  const normalRun=await post("normal");
+  assert.equal(normalRun.status,200);assert.equal(normalRun.body.models.length,4);assert.equal(normalRun.body.dynamic_route,"expert-panel-v1");assert.equal(new Set(normalRun.body.companies).size,4);assert.deepEqual(calls.map(x=>x.slot),["expert-1","expert-2","expert-3","judge"]);
 
-  await reset();
-  const judge=await post({task_id:"slow-judge",prompt:"SLOW_JUDGE",model_count:4,models:["google/gemini-a","deepseek/r1","mistralai/magistral","qwen/qwen3"],model_timeout_seconds:2,judge_timeout_seconds:1,timeout_seconds:20,max_tokens:64});
-  assert.equal(judge.status,200);assert.equal(judge.body.execution_receipt.at(-1).stage,"judge");assert.equal(judge.body.execution_receipt.at(-1).replaced,true);assert.equal(judge.body.execution_receipt.at(-1).attempts[0].error,"UPSTREAM_TIMEOUT");assert.notEqual(judge.body.judge.model,"qwen/qwen3");assert.equal(new Set(judge.body.models.map(x=>x.split("/")[0])).size,4);
+  await reset("same-family-fallback");
+  const fallback=await post("fallback");
+  assert.equal(fallback.status,200);assert.equal(fallback.body.models[0],"google/gemini-pro-backup");assert.equal(new Set(fallback.body.companies).size,4);
 
-  await reset();catalogMode="short";
-  const short=await post({task_id:"not-enough",prompt:"NORMAL",model_count:4,timeout_seconds:20,max_tokens:64});
-  assert.equal(short.status,502);assert.equal(short.body.error,"NOT_ENOUGH_UNIQUE_MODEL_COMPANIES");
+  await reset("duplicate");
+  const duplicate=await post("duplicate");
+  assert.equal(duplicate.status,502);assert.equal(duplicate.body.error,"COMPANY_DIVERSITY_INVARIANT_FAILED");
 
-  console.log(JSON.stringify({ok:true,suite:"expert-resilience",tests:["same-company-skip-and-fill","exact-4-company-panel","slow-expert-replacement","slow-judge-replacement","fail-if-unique-company-count-insufficient"]}));
-}catch(e){exitCode=1;console.error(e)}
+  await reset("forbidden");
+  const forbidden=await post("forbidden");
+  assert.equal(forbidden.status,502);assert.equal(forbidden.body.error,"DYNAMIC_ROUTE_POLICY_VIOLATION");assert.equal(calls.length,1,"fail closed before later expert slots");
+
+  await reset("missing-metadata");
+  const missing=await post("missing");
+  assert.equal(missing.status,502);assert.equal(missing.body.error,"DYNAMIC_ROUTE_METADATA_MISSING");assert.equal(calls.length,1);
+
+  console.log(JSON.stringify({ok:true,suite:"expert-resilience",tests:["dynamic-slot-chain","same-company-lane-fallback","cross-slot-company-diversity-fail-closed","forbidden-model-fail-closed","response-routing-metadata-required"]}));
+}catch(error){exitCode=1;console.error(error)}
 try{await server.close()}catch{}
 network.close();clearTimeout(watchdog);process.exit(exitCode);
