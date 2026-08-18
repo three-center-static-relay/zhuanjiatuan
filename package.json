@@ -3,14 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "stress": "node tests/stress.mjs",
+    "stress": "node tests/dynamic-runtime.mjs",
     "test:capability-manifest": "node tests/capability-manifest-contract.mjs",
-    "route:plan": "node scripts/apply-expert-panel-route.mjs --dry-run",
-    "route:apply": "node scripts/apply-expert-panel-route.mjs",
-    "route:version-only": "node scripts/apply-expert-panel-route.mjs --no-deploy",
-    "test:build-gate": "node tests/cloudflare-build-gate-contract.mjs && node tests/capability-manifest-contract.mjs && node tests/bounded-response-contract.mjs && node tests/openrouter-rest-production-contract.mjs && node tests/ai-gateway-contract.mjs && node tests/task-profile-contract.mjs && node tests/dynamic-route-writer-contract.mjs && node tests/stress.mjs && node tests/resilience.mjs && node tests/admin-context-contract.mjs",
+    "route:plan": "node scripts/apply-adaptive-expert-route.mjs --dry-run",
+    "route:apply": "node scripts/apply-adaptive-expert-route.mjs",
+    "route:version-only": "node scripts/apply-adaptive-expert-route.mjs --no-deploy",
+    "test:build-gate": "node tests/cloudflare-build-gate-contract.mjs && node tests/capability-manifest-contract.mjs && node tests/bounded-response-contract.mjs && node tests/openrouter-rest-production-contract.mjs && node tests/ai-gateway-contract.mjs && node tests/task-profile-contract.mjs && node tests/dynamic-route-writer-contract.mjs && node tests/dynamic-panel-contract.mjs && node tests/dynamic-runtime.mjs && node tests/admin-context-contract.mjs",
     "cf:build": "npm run test:build-gate",
-    "cf:preview": "npm run cf:build && npx wrangler versions upload",
+    "cf:preview": "npm run cf:build && npx wrangler deploy --dry-run",
     "cf:deploy": "npm run cf:build && npx wrangler deploy"
   },
   "devDependencies": {"wrangler": "4.123.0", "msw": "2.15.0"}
