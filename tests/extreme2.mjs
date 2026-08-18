@@ -4,7 +4,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 
 const HARD_TIMEOUT_MS=90000;
-const CHAT_ENDPOINT="https://gateway.ai.cloudflare.com/v1/e3aec027af13c557bbcb831d29c1e7b4/four-center-ai-gateway/openrouter/chat/completions";
+const CHAT_ENDPOINT="https://gateway.ai.cloudflare.com/v1/e3aec027af13c557bbcb831d29c1e7b4/test/openrouter/chat/completions";
 const watchdog=setTimeout(()=>{console.error("EXTREME2_WATCHDOG_TIMEOUT");process.exit(124)},HARD_TIMEOUT_MS);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const within=(p,ms,label)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(`TIMEOUT:${label}`)),ms))]);
@@ -24,8 +24,8 @@ const network=setupServer(
   http.get("https://openrouter.ai/api/v1/models",()=>{catalogCalls++;return HttpResponse.json({data:catalog})}),
   http.post(CHAT_ENDPOINT,async({request})=>{
     assert.equal(request.headers.get("cf-aig-authorization"),"Bearer test-gateway-token");
-    assert.equal(request.headers.get("cf-aig-skip-cache"),"true");
-    assert.equal(request.headers.get("cf-aig-collect-log"),"false");
+    assert.equal(request.headers.get("cf-aig-skip-cache"),null);
+    assert.equal(request.headers.get("cf-aig-collect-log"),null);
     assert.equal(request.headers.get("cf-aig-max-attempts"),"1");
     chatCalls++;const b=await request.json(),prompt=promptOf(b);
     if(prompt.includes("HOLD_CHAT")&&chatCalls===1){holdEnteredResolve();await holdRelease}
