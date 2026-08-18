@@ -4,34 +4,30 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 
 const HARD_TIMEOUT_MS=90000;
-const CHAT_ENDPOINT="https://gateway.ai.cloudflare.com/v1/e3aec027af13c557bbcb831d29c1e7b4/test/openrouter/chat/completions";
+const CHAT_ENDPOINT="https://gateway.ai.cloudflare.com/v1/e3aec027af13c557bbcb831d29c1e7b4/test/compat/chat/completions";
 const watchdog=setTimeout(()=>{console.error("EXTREME2_WATCHDOG_TIMEOUT");process.exit(124)},HARD_TIMEOUT_MS);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const within=(p,ms,label)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(`TIMEOUT:${label}`)),ms))]);
 async function waves(total,width,fn,label){const out=[];for(let base=0;base<total;base+=width){const part=await within(Promise.all(Array.from({length:Math.min(width,total-base)},(_,i)=>fn(base+i))),10000,`${label}-${base}`);out.push(...part)}return out}
 
-const catalog=[
-  {id:"google/gemini-2.5-pro",pricing:{prompt:"0.000001",completion:"0.000001"}},
-  {id:"deepseek/deepseek-r1",pricing:{prompt:"0.000001",completion:"0.000001"}},
-  {id:"mistralai/magistral-medium",pricing:{prompt:"0.000001",completion:"0.000001"}},
-  {id:"qwen/qwen3-235b-a22b",pricing:{prompt:"0.000001",completion:"0.000001"}}
-];
-let chatCalls=0,catalogCalls=0,holdEnteredResolve=()=>{},holdReleaseResolve=()=>{},holdEntered=Promise.resolve(),holdRelease=Promise.resolve();
+const routeModels={"expert-1":"google/gemini-2.5-pro","expert-2":"deepseek/deepseek-r1","expert-3":"mistralai/magistral-medium",judge:"qwen/qwen3-235b-a22b"};
+let chatCalls=0,holdEnteredResolve=()=>{},holdReleaseResolve=()=>{},holdEntered=Promise.resolve(),holdRelease=Promise.resolve();
 function armHold(){holdEntered=new Promise(r=>{holdEnteredResolve=r});holdRelease=new Promise(r=>{holdReleaseResolve=r})}
 function letGo(){holdReleaseResolve()}
 function promptOf(body){return (body?.messages||[]).map(x=>String(x?.content||"")).join("\n")}
 const network=setupServer(
-  http.get("https://openrouter.ai/api/v1/models",()=>{catalogCalls++;return HttpResponse.json({data:catalog})}),
   http.post(CHAT_ENDPOINT,async({request})=>{
     assert.equal(request.headers.get("cf-aig-authorization"),"Bearer test-gateway-token");
     assert.equal(request.headers.get("cf-aig-skip-cache"),null);
     assert.equal(request.headers.get("cf-aig-collect-log"),null);
     assert.equal(request.headers.get("cf-aig-max-attempts"),"1");
-    chatCalls++;const b=await request.json(),prompt=promptOf(b);
+    chatCalls++;const b=await request.json(),prompt=promptOf(b),metadata=JSON.parse(request.headers.get("cf-aig-metadata")||"{}");
+    assert.equal(b.model,"dynamic/expert-panel-v1");assert.ok(routeModels[metadata.expert_slot]);
     if(prompt.includes("HOLD_CHAT")&&chatCalls===1){holdEnteredResolve();await holdRelease}
     if(prompt.includes("BAD_JSON_CHAT"))return HttpResponse.text("{bad-json",{status:200,headers:{"content-type":"application/json"}});
-    if(prompt.includes("EMPTY_CHAT"))return HttpResponse.json({id:`chat-${chatCalls}`,model:b.model,choices:[{message:{role:"assistant",content:""}}]});
-    return HttpResponse.json({id:`chat-${chatCalls}`,model:b.model,choices:[{message:{role:"assistant",content:"Result OK. Independent reasoning completed."},finish_reason:"stop"}],usage:{prompt_tokens:20,completion_tokens:12,total_tokens:32}})
+    const headers={"cf-aig-model":routeModels[metadata.expert_slot],"cf-aig-provider":"openrouter"};
+    if(prompt.includes("EMPTY_CHAT"))return HttpResponse.json({id:`chat-${chatCalls}`,model:routeModels[metadata.expert_slot],choices:[{message:{role:"assistant",content:""}}]},{headers});
+    return HttpResponse.json({id:`chat-${chatCalls}`,model:routeModels[metadata.expert_slot],choices:[{message:{role:"assistant",content:"Result OK. Independent reasoning completed."},finish_reason:"stop"}],usage:{prompt_tokens:20,completion_tokens:12,total_tokens:32}},{headers})
   })
 );
 network.listen({onUnhandledRequest:"error"});
@@ -39,7 +35,7 @@ const server=createTestHarness({workers:[{configPath:"./wrangler.test.jsonc"}]})
 const internal=p=>`https://expert.internal${p}`,external=p=>`https://public.example${p}`;
 async function post(path,body){const r=await server.fetch(internal(path),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});return{status:r.status,body:await r.json().catch(()=>null)}}
 async function run(id,prompt="NORMAL",modelCount=4,timeoutSeconds=300){return post("/v1/run",{task_id:id,prompt,model_count:modelCount,max_tokens:512,timeout_seconds:timeoutSeconds,roles:["Quantitative analyst","Adversarial reviewer","Decision scientist"]})}
-async function reset(){await within(server.reset(),5000,"reset");chatCalls=0;catalogCalls=0;holdEnteredResolve=()=>{};holdReleaseResolve=()=>{};holdEntered=Promise.resolve();holdRelease=Promise.resolve()}
+async function reset(){await within(server.reset(),5000,"reset");chatCalls=0;holdEnteredResolve=()=>{};holdReleaseResolve=()=>{};holdEntered=Promise.resolve();holdRelease=Promise.resolve()}
 
 let exitCode=0;
 try{
@@ -51,7 +47,7 @@ try{
   const unique=await within(Promise.all(Array.from({length:256},(_,i)=>run(`x2-u-${i}`,"NORMAL",4,300))),25000,"256-unique");
   assert.equal(unique.filter(x=>x.status===409&&x.body?.error==="BUSY").length,199);
   assert.equal(unique.filter(x=>x.status===429&&x.body?.error==="RATE_LIMITED").length,57);
-  assert.equal(catalogCalls,1);assert.equal(chatCalls,1);
+  assert.equal(chatCalls,1);
   letGo();assert.equal((await within(holder,10000,"holder-finish")).status,200);assert.equal(chatCalls,4);
 
   await reset();armHold();
@@ -60,7 +56,7 @@ try{
   const dup=await within(Promise.all(Array.from({length:512},()=>run("x2-dup","NORMAL",4,300))),30000,"512-duplicate");
   assert.equal(dup.filter(x=>x.status===409&&x.body?.error==="DUPLICATE_TASK").length,199);
   assert.equal(dup.filter(x=>x.status===429&&x.body?.error==="RATE_LIMITED").length,313);
-  assert.equal(catalogCalls,1);assert.equal(chatCalls,1);
+  assert.equal(chatCalls,1);
   letGo();assert.equal((await within(dupHolder,10000,"dup-finish")).status,200);
 
   await reset();
@@ -74,7 +70,7 @@ try{
   await reset();
   const empty=await run("x2-empty","EMPTY_CHAT",2,300);
   assert.equal(empty.status,502,"empty model output must fail closed rather than report completed");
-  assert.ok(["EMPTY_EXPERT_OUTPUT","EMPTY_JUDGE_OUTPUT"].includes(empty.body?.error));
+  assert.equal(empty.body?.error,"EMPTY_MODEL_OUTPUT");
   const afterEmpty=await run("x2-after-empty","NORMAL",2,300);assert.equal(afterEmpty.status,200);
 
   await reset();armHold();
@@ -90,7 +86,7 @@ try{
   const rate=await waves(2000,128,i=>post("/v1/run",{task_id:`x2-rate-${i}`}),"rate");
   assert.equal(rate.filter(x=>x.status===400&&x.body?.error==="INVALID_REQUEST").length,200);
   assert.equal(rate.filter(x=>x.status===429&&x.body?.error==="RATE_LIMITED").length,1800);
-  assert.equal(chatCalls,0);assert.equal(catalogCalls,0);
+  assert.equal(chatCalls,0);
 
   const health=await waves(1024,128,()=>server.fetch(external("/health")),"health");
   assert.equal(health.filter(r=>r.status===200).length,1024);
