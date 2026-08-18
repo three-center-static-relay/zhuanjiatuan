@@ -11,7 +11,7 @@
     "test:syntax": "node --check src/dynamic-index.js && node --check src/guard.js && node --check src/governance-relay.js && node --check scripts/apply-adaptive-expert-route-v3.mjs",
     "test:build-gate": "npm run test:syntax && node tests/cloudflare-build-gate-contract.mjs && node tests/capability-manifest-contract.mjs && node tests/bounded-response-contract.mjs && node tests/openrouter-rest-production-contract.mjs && node tests/ai-gateway-contract.mjs && node tests/task-profile-contract.mjs && node tests/dynamic-route-writer-contract.mjs && node tests/dynamic-panel-contract.mjs && node tests/dynamic-runtime.mjs && node tests/admin-context-contract.mjs",
     "cf:build": "npm run test:build-gate",
-    "cf:preview": "npm run cf:build && npx wrangler deploy --dry-run",
+    "cf:preview": "npm run cf:build && npx wrangler versions upload --message \"candidate expert V3\"",
     "cf:deploy": "npm run cf:build && npx wrangler deploy"
   },
   "devDependencies": {"wrangler": "4.123.0", "msw": "2.15.0"}
