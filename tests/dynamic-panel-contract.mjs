@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import {fileURLToPath} from "node:url";
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
+const worker=fs.readFileSync(path.join(root,"src/dynamic-index.js"),"utf8"),writer=fs.readFileSync(path.join(root,"scripts/apply-adaptive-expert-route.mjs"),"utf8"),gateway=fs.readFileSync(path.join(root,"src/ai-gateway.js"),"utf8");
+assert.match(worker,/MAX_EXPERTS=6/);assert.match(worker,/MAX_JUDGES=2/);assert.match(worker,/MAX_LANES=8/);assert.match(worker,/MAX_ROUNDS=2/);assert.match(worker,/dynamic_professions:true/);assert.match(worker,/dynamic_panel_size:true/);assert.match(worker,/dynamic_topology:true/);assert.match(worker,/dynamic_cost_mode:true/);assert.match(worker,/free_models_allowed:true/);assert.match(worker,/architectPlan/);assert.match(worker,/executeExperts/);assert.match(worker,/executeJudges/);assert.match(worker,/rounds===2/);assert.match(worker,/COMPANY_DIVERSITY_INVARIANT_FAILED/);assert.doesNotMatch(worker,/exclude_free:true/);
+for(const key of ["stage","lane","capability","depth","cost_mode"])assert.match(gateway,new RegExp(key));
+assert.match(writer,/intelligence-high-to-low/);assert.match(writer,/latency-low-to-high/);assert.match(writer,/throughput-high-to-low/);assert.match(writer,/context-high-to-low/);assert.match(writer,/pricing-low-to-high/);assert.match(writer,/top-weekly/);assert.match(writer,/free_models_allowed:true/);assert.match(writer,/random_free_router_used:false/);assert.match(writer,/openrouter\/free/);assert.match(writer,/MAX_LANES=8/);assert.match(writer,/type:"percentage"/);assert.match(writer,/same_company_fallback/);assert.doesNotMatch(writer,/low\.includes\(":free"\).*return false/);assert.doesNotMatch(writer,/type:"rate"/);assert.doesNotMatch(writer,/limitType:"cost"/);
+console.log(JSON.stringify({ok:true,suite:"dynamic-panel-contract",dynamic_dimensions:["panel-size","profession","judges","rounds","topology","company-lane","capability","depth","cost-mode","free-paid","model","fallback","canary"]}));
