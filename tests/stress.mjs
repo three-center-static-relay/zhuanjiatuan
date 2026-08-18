@@ -3,6 +3,7 @@ import { createTestHarness } from "wrangler";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 const HARD_TIMEOUT_MS=55000;
+const CHAT_ENDPOINT="https://gateway.ai.cloudflare.com/v1/e3aec027af13c557bbcb831d29c1e7b4/four-center-ai-gateway/openrouter/chat/completions";
 const watchdog=setTimeout(()=>{console.error("STRESS_WATCHDOG_TIMEOUT");process.exit(124)},HARD_TIMEOUT_MS);
 const within=(p,ms,label)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(`TIMEOUT:${label}`)),ms))]);
 async function waves(total,width,fn,label){const out=[];for(let base=0;base<total;base+=width){const part=await within(Promise.all(Array.from({length:Math.min(width,total-base)},(_,i)=>fn(base+i))),8000,`${label}-${base}`);out.push(...part)}return out}
@@ -22,7 +23,7 @@ function letGo(){holdReleaseResolve()}
 function promptOf(body){return (body?.messages||[]).map(x=>String(x?.content||"")).join("\n")}
 const network=setupServer(
   http.get("https://openrouter.ai/api/v1/models",()=>{catalogCalls++;return HttpResponse.json({data:catalog})}),
-  http.post("https://openrouter.ai/api/v1/chat/completions",async({request})=>{chatCalls++;const b=await request.json(),prompt=promptOf(b);if(prompt.includes("FAIL_CHAT"))return HttpResponse.json({error:{message:"synthetic chat failure"}},{status:503});if(prompt.includes("OVERSIZE_CHAT"))return HttpResponse.json({choices:[{message:{role:"assistant",content:"x".repeat(1600000)}}]});if(prompt.includes("HOLD_CHAT")&&chatCalls===1){holdEnteredResolve();await holdRelease}return HttpResponse.json({id:`chat-${chatCalls}`,model:b.model,choices:[{index:0,message:{role:"assistant",content:"2. 1+1=2."},finish_reason:"stop"}],usage:{prompt_tokens:8,completion_tokens:5,total_tokens:13}})})
+  http.post(CHAT_ENDPOINT,async({request})=>{chatCalls++;const b=await request.json(),prompt=promptOf(b);assert.equal(request.headers.get("cf-aig-authorization"),"Bearer test-gateway-token");assert.equal(request.headers.get("cf-aig-skip-cache"),"true");assert.equal(request.headers.get("cf-aig-collect-log"),"false");assert.equal(request.headers.get("cf-aig-max-attempts"),"1");if(prompt.includes("FAIL_CHAT"))return HttpResponse.json({error:{message:"synthetic chat failure"}},{status:503});if(prompt.includes("OVERSIZE_CHAT"))return HttpResponse.json({choices:[{message:{role:"assistant",content:"x".repeat(1600000)}}]});if(prompt.includes("HOLD_CHAT")&&chatCalls===1){holdEnteredResolve();await holdRelease}return HttpResponse.json({id:`chat-${chatCalls}`,model:b.model,choices:[{index:0,message:{role:"assistant",content:"2. 1+1=2."},finish_reason:"stop"}],usage:{prompt_tokens:8,completion_tokens:5,total_tokens:13}})})
 );
 network.listen({onUnhandledRequest:"error"});
 const server=createTestHarness({workers:[{configPath:"./wrangler.test.jsonc"}]});
