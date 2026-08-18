@@ -1,4 +1,4 @@
-import {readTextBounded} from "./bounded-response.js";
+import { aiGatewayConfigured, aiGatewayRequestHeaders, openRouterChatEndpoint } from "./ai-gateway.js";
 
 const MAX_BODY_BYTES = 65536;
 const MAX_UPSTREAM_BYTES = 1500000;
@@ -49,7 +49,10 @@ async function fetchJsonBounded(url, init, timeoutMs) {
   const timer = setTimeout(() => controller.abort(), Math.max(1, timeoutMs));
   try {
     const response = await fetch(url, { ...init, signal: controller.signal });
-    const raw = await readTextBounded(response, MAX_UPSTREAM_BYTES);
+    const raw = await response.text();
+    if (new TextEncoder().encode(raw).length > MAX_UPSTREAM_BYTES) {
+      throw Object.assign(new Error("UPSTREAM_RESPONSE_TOO_LARGE"), { status: 502 });
+    }
     let body = null;
     if (raw) {
       try { body = JSON.parse(raw); } catch { throw Object.assign(new Error("UPSTREAM_BAD_JSON"), { status: 502 }); }
@@ -105,12 +108,14 @@ function contentOf(payload) {
 }
 
 async function callModel(env, model, messages, maxTokens, timeoutMs) {
-  return fetchJsonBounded("https://openrouter.ai/api/v1/chat/completions", {
+  const endpoint = await openRouterChatEndpoint(env);
+  return fetchJsonBounded(endpoint, {
     method: "POST",
     headers: {
       authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
       "content-type": "application/json",
-      accept: "application/json"
+      accept: "application/json",
+      ...aiGatewayRequestHeaders(env, timeoutMs)
     },
     body: JSON.stringify({
       model,
@@ -126,6 +131,9 @@ async function callModel(env, model, messages, maxTokens, timeoutMs) {
 export async function runGovernanceRelay(request, env) {
   if (!env.OPENROUTER_API_KEY) {
     return json({ ok: false, error: "UPSTREAM_AUTH_FAILED", message: "OPENROUTER_API_KEY is not configured" }, 503);
+  }
+  if (!aiGatewayConfigured(env)) {
+    return json({ ok: false, error: "AI_GATEWAY_NOT_CONFIGURED", message: "Cloudflare AI Gateway binding or gateway id is not configured" }, 503);
   }
   try {
     const body = await parseBody(request);
