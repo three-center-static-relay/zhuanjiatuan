@@ -1,6 +1,6 @@
 # Cloudflare Dynamic Route: `expert-panel-v1`
 
-This route delegates concrete model selection, per-model timeouts, same-company fallbacks, rate limits, and later budget rules to Cloudflare AI Gateway. The Worker remains the fail-closed coordinator for authorization, task locking, task profiling, expert roles, cancellation, cross-company diversity, judge synthesis, and output validation.
+This route delegates concrete model selection, per-model timeouts, same-company fallbacks, and route versioning to Cloudflare AI Gateway. The Worker remains the fail-closed coordinator for authorization, task locking, task profiling, expert roles, cancellation, cross-company diversity, judge synthesis, and output validation.
 
 ## Required gateway settings
 
@@ -43,8 +43,9 @@ The Worker may still compute richer internal task-profile fields such as task ty
 - task-domain/depth-based model specialization
 - same-company fallback
 - per-model timeout
-- rate limit and later budget limit
 - route versioning, rollout, and rollback
+
+Cloudflare Dynamic Route rate limiting is intentionally disabled for this route unless explicitly enabled later.
 
 ## Runtime request contract
 
@@ -63,7 +64,6 @@ Base graph:
 
 ```text
 Start
-  -> Rate Limit
   -> expert_slot conditional chain
        expert-1 -> task-profile subtree -> Model -> End
        expert-2 -> task-profile subtree -> Model -> End
@@ -75,17 +75,13 @@ Start
 
 The unmatched branch must terminate without a model. Do not add a universal default model.
 
-## Rate limit
+## Cloudflare route limits
 
-Use a count rate limit before seat conditionals:
+Do not add a `Rate Limit` node to `expert-panel-v1` at this stage.
 
-- key: `metadata.center`
-- limit: `20`
-- window: `60` seconds
-- success: continue to seat conditionals
-- fallback/over-limit: terminate at `End`
+Do not add a `Budget Limit` node or percentage split unless a later explicit policy enables them.
 
-This is intentionally conservative for cost control. It can be raised after real usage is measured.
+Worker-side task locking, cancellation, bounded timeouts, fail-closed checks, and existing internal execution protection remain independent of this Cloudflare route configuration.
 
 ## Seat conditions
 
