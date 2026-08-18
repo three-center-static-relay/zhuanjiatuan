@@ -1,4 +1,4 @@
-const DEFAULT_AI_GATEWAY_ID = "four-center-ai-gateway";
+const DEFAULT_AI_GATEWAY_ID = "test";
 
 function configurationError(message, status = 503) {
   return Object.assign(new Error(message), { status });
@@ -31,8 +31,6 @@ export function aiGatewayRequestHeaders(env, timeoutMs) {
   if (!token) throw configurationError("AI_GATEWAY_NOT_CONFIGURED");
   return {
     "cf-aig-authorization": `Bearer ${token}`,
-    "cf-aig-skip-cache": "true",
-    "cf-aig-collect-log": "false",
     "cf-aig-max-attempts": "1",
     "cf-aig-request-timeout": String(boundedTimeout),
     "cf-aig-metadata": JSON.stringify({ center: "expert", route: "model-inference" })
@@ -47,8 +45,9 @@ export function aiGatewayDescriptor(env) {
     provider: "openrouter",
     inference_transport: "cloudflare-ai-gateway-openrouter",
     catalog_transport: "openrouter-direct-metadata-only",
-    cache: false,
-    request_logging: false,
-    gateway_retries: 0
+    cache: "gateway-default",
+    request_logging: "gateway-default",
+    gateway_retries: 0,
+    dynamic_routing: false
   };
 }
