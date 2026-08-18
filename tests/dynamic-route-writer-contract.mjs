@@ -1,29 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-
-const source = fs.readFileSync(new URL("../scripts/apply-expert-panel-route.mjs", import.meta.url), "utf8");
-
-assert.match(source, /intelligence-high-to-low/);
-assert.match(source, /supported_parameters=reasoning/);
-assert.match(source, /output_modalities=text/);
-assert.match(source, /exclude_openai|bannedCompany/);
-assert.match(source, /anthropic/);
-assert.match(source, /claude/);
-assert.match(source, /:free/);
-assert.match(source, /flash/);
-assert.match(source, /companyOrder\.slice\(0, 4\)/);
-assert.match(source, /metadata\.expert_slot/);
-assert.match(source, /metadata\.reasoning_depth/);
-assert.match(source, /metadata\.task_domain/);
-assert.match(source, /provider:\s*"openrouter"/);
-assert.match(source, /retries:\s*0/);
-assert.match(source, /CLOUDFLARE_AI_GATEWAY_API_TOKEN/);
-assert.match(source, /\/ai-gateway\/gateways\//);
-assert.match(source, /\/versions/);
-assert.match(source, /\/deployments/);
-assert.match(source, /--dry-run/);
-assert.match(source, /--no-deploy/);
-assert.doesNotMatch(source, /console\.(log|error)\([^\n]*API_TOKEN/);
-assert.doesNotMatch(source, /CLOUDFLARE_BUILDS_API_TOKEN/);
-
-console.log(JSON.stringify({ok:true,suite:"dynamic-route-writer-contract",one_command_writer:true,secrets_redacted:true}));
+const source=fs.readFileSync(new URL("../scripts/apply-adaptive-expert-route.mjs",import.meta.url),"utf8");
+for(const s of ["intelligence-high-to-low","latency-low-to-high","throughput-high-to-low","context-high-to-low","pricing-low-to-high","top-weekly"])assert.match(source,new RegExp(s));
+assert.match(source,/supported_parameters=reasoning/);assert.match(source,/output_modalities=text/);assert.match(source,/bannedCompanies/);assert.match(source,/anthropic/);assert.match(source,/claude/);assert.match(source,/flash/);assert.match(source,/freeModel/);assert.match(source,/openrouter\/free/);assert.match(source,/MAX_LANES=8/);assert.match(source,/metadata\.lane/);assert.match(source,/metadata\.stage/);assert.match(source,/metadata\.capability/);assert.match(source,/metadata\.depth/);assert.match(source,/metadata\.cost_mode/);assert.match(source,/provider:"openrouter"/);assert.match(source,/retries:0/);assert.match(source,/type:"percentage"/);assert.match(source,/CLOUDFLARE_AI_GATEWAY_API_TOKEN/);assert.match(source,/\/ai-gateway\/gateways\//);assert.match(source,/\/versions/);assert.match(source,/\/deployments/);assert.match(source,/--dry-run/);assert.match(source,/--no-deploy/);assert.doesNotMatch(source,/type:"rate"/);assert.doesNotMatch(source,/CLOUDFLARE_BUILDS_API_TOKEN/);assert.doesNotMatch(source,/console\.(log|error)\([^\n]*API_TOKEN/);
+console.log(JSON.stringify({ok:true,suite:"dynamic-route-writer-contract",one_command_writer:true,multi_signal:true,free_models:true,eight_company_lanes:true,canary_percentage:true,secrets_redacted:true}));
