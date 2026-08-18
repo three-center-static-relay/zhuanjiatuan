@@ -39,16 +39,16 @@ export function dynamicRouteModel(env) {
   return `dynamic/${route}`;
 }
 
-export function routeMetadata(metadata = {}) {
+export function routeMetadata(env, metadata = {}) {
   const selected = {
     center: "expert",
+    dynamic_route: aiGatewayRoute(env),
     expert_slot: String(metadata?.expert_slot || "").trim(),
     task_domain: String(metadata?.task_domain || "general").trim(),
-    reasoning_depth: String(metadata?.reasoning_depth || "standard").trim(),
-    context_size: String(metadata?.context_size || "short").trim()
+    reasoning_depth: String(metadata?.reasoning_depth || "standard").trim()
   };
   if (!selected.expert_slot) throw configurationError("AI_GATEWAY_EXPERT_SLOT_REQUIRED", 500);
-  if (Object.keys(selected).length > MAX_CUSTOM_METADATA) throw configurationError("AI_GATEWAY_METADATA_LIMIT_EXCEEDED", 500);
+  if (Object.keys(selected).length !== MAX_CUSTOM_METADATA) throw configurationError("AI_GATEWAY_METADATA_LIMIT_MISMATCH", 500);
   return selected;
 }
 
@@ -60,7 +60,7 @@ export function aiGatewayRequestHeaders(env, timeoutMs, metadata = {}) {
     "cf-aig-authorization": `Bearer ${token}`,
     "cf-aig-max-attempts": "1",
     "cf-aig-request-timeout": String(boundedTimeout),
-    "cf-aig-metadata": JSON.stringify(routeMetadata(metadata))
+    "cf-aig-metadata": JSON.stringify(routeMetadata(env, metadata))
   };
 }
 
@@ -78,6 +78,6 @@ export function aiGatewayDescriptor(env) {
     worker_retries: 0,
     dynamic_routing: true,
     custom_metadata_limit: MAX_CUSTOM_METADATA,
-    routed_metadata: ["center","expert_slot","task_domain","reasoning_depth","context_size"]
+    routed_metadata: ["center","dynamic_route","expert_slot","task_domain","reasoning_depth"]
   };
 }
