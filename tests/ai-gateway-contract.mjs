@@ -42,20 +42,20 @@ assert.equal(headers["cf-aig-request-timeout"], "45000");
 const routedMetadata = JSON.parse(headers["cf-aig-metadata"]);
 assert.deepEqual(routedMetadata, {
   center: "expert",
+  dynamic_route: "expert-panel-v1",
   expert_slot: "expert-1",
   task_domain: "coding",
-  reasoning_depth: "deep",
-  context_size: "long"
+  reasoning_depth: "deep"
 });
 assert.equal(Object.keys(routedMetadata).length, 5);
-assert.deepEqual(routeMetadata({ expert_slot: "judge" }), {
+assert.deepEqual(routeMetadata(env, { expert_slot: "judge" }), {
   center: "expert",
+  dynamic_route: "expert-panel-v1",
   expert_slot: "judge",
   task_domain: "general",
-  reasoning_depth: "standard",
-  context_size: "short"
+  reasoning_depth: "standard"
 });
-assert.throws(() => routeMetadata({}), error => error?.message === "AI_GATEWAY_EXPERT_SLOT_REQUIRED");
+assert.throws(() => routeMetadata(env, {}), error => error?.message === "AI_GATEWAY_EXPERT_SLOT_REQUIRED");
 
 assert.deepEqual(aiGatewayDescriptor(env), {
   id: "test",
@@ -70,7 +70,7 @@ assert.deepEqual(aiGatewayDescriptor(env), {
   worker_retries: 0,
   dynamic_routing: true,
   custom_metadata_limit: 5,
-  routed_metadata: ["center","expert_slot","task_domain","reasoning_depth","context_size"]
+  routed_metadata: ["center","dynamic_route","expert_slot","task_domain","reasoning_depth"]
 });
 
 await assert.rejects(
