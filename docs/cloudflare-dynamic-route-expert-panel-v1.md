@@ -1,173 +1,176 @@
-# Cloudflare Dynamic Route: `expert-panel-v1`
+# Cloudflare Dynamic Route: `expert-panel-v1` — Adaptive Panel V2
 
-This route delegates concrete model selection, per-model timeouts, same-company fallbacks, and route versioning to Cloudflare AI Gateway. The Worker remains the fail-closed coordinator for authorization, task locking, task profiling, expert roles, cancellation, cross-company diversity, judge synthesis, and output validation.
+## Operating principle
 
-## Required gateway settings
-
-- Gateway: `test`
-- Authenticated Gateway: enabled
-- Provider key: store the OpenRouter key in AI Gateway BYOK/Provider Keys with alias `default`
-- Worker secret: `AI_GATEWAY_TOKEN`
-- Worker variable: `AI_GATEWAY_ROUTE=expert-panel-v1`
-
-## Cloudflare custom-metadata limit
-
-Cloudflare AI Gateway currently accepts at most five custom metadata entries per request. The Worker therefore emits exactly these five routing fields:
+Do **not** construct this route manually in the dashboard. The canonical route is generated from code and written through the Cloudflare AI Gateway REST API.
 
 ```text
-metadata.center = expert
-metadata.dynamic_route = expert-panel-v1
-metadata.expert_slot = expert-1 | expert-2 | expert-3 | judge | governance
-metadata.task_domain = general | legal | finance | coding | quantitative | medical | geospatial | business | policy | science | social | research
-metadata.reasoning_depth = standard | deep
+npm run route:plan          # no Cloudflare mutation
+npm run route:version-only  # create new route version, do not deploy
+npm run route:apply         # create, validate, deploy
 ```
 
-The Worker may still compute richer internal task-profile fields such as task type, complexity, context size, latency priority, and cost priority, but they are not sent as Cloudflare custom metadata while the five-field platform limit applies. Complexity is already folded into `reasoning_depth`, so high-complexity work routes to the deep branch.
+The writer is `scripts/apply-adaptive-expert-route.mjs`.
 
-## Responsibility split
+## What is dynamic
 
-### Worker owns
+No permanent expert roster exists. The system adapts all of the following per task:
 
-- how many expert seats are requested
-- expert role prompts and judge role
-- deterministic task profiling
-- single-task lock and cancellation
-- exact company-diversity validation
-- verification of actual `cf-aig-model` and `cf-aig-provider`
-- fail-closed policy enforcement
-- final synthesis and response validation
-
-### Cloudflare owns
-
-- concrete model ID for each seat
-- task-domain/depth-based model specialization
+- number of experts: 1–6
+- expert professions/titles
+- expert mandates and adversarial viewpoints
+- judge count: 0–2
+- one or two deliberation rounds
+- parallel / serial / hybrid execution topology
+- company lane allocation
+- capability family
+- reasoning depth
+- free-first / balanced / quality-first cost mode
+- concrete model
 - same-company fallback
-- per-model timeout
-- route versioning, rollout, and rollback
+- safe challenger/canary model during explicit exploration
 
-Cloudflare Dynamic Route rate limiting is intentionally disabled for this route unless explicitly enabled later.
-
-## Runtime request contract
-
-The Worker calls:
-
-```text
-POST https://gateway.ai.cloudflare.com/v1/{account_id}/test/compat/chat/completions
-model = dynamic/expert-panel-v1
-```
-
-## Route graph
-
-Create `test` > Dynamic Routes > `expert-panel-v1`.
-
-Base graph:
-
-```text
-Start
-  -> expert_slot conditional chain
-       expert-1 -> task-profile subtree -> Model -> End
-       expert-2 -> task-profile subtree -> Model -> End
-       expert-3 -> task-profile subtree -> Model -> End
-       judge -> task-profile subtree -> Model -> End
-       governance -> task-profile subtree -> Model -> End
-       unmatched -> End without model
-```
-
-The unmatched branch must terminate without a model. Do not add a universal default model.
-
-## Cloudflare route limits
-
-Do not add a `Rate Limit` node to `expert-panel-v1` at this stage.
-
-Do not add a `Budget Limit` node or percentage split unless a later explicit policy enables them.
-
-Worker-side task locking, cancellation, bounded timeouts, fail-closed checks, and existing internal execution protection remain independent of this Cloudflare route configuration.
-
-## Seat conditions
-
-Chain these conditions in order, all using Custom Metadata:
-
-```text
-metadata.expert_slot $eq expert-1
-metadata.expert_slot $eq expert-2
-metadata.expert_slot $eq expert-3
-metadata.expert_slot $eq judge
-metadata.expert_slot $eq governance
-```
-
-Each false branch goes to the next condition. The final false branch goes directly to `End` with no model.
-
-## Task-profile subtree
-
-Inside each seat, keep the company lane fixed for the deployed route version.
-
-Recommended order:
-
-1. `metadata.reasoning_depth == deep`
-   - strongest paid reasoning model in that company lane
-2. domain specialization when clearly useful:
-   - `metadata.task_domain == coding`
-   - `metadata.task_domain == quantitative`
-   - `metadata.task_domain == legal`
-   - `metadata.task_domain == research`
-3. otherwise
-   - balanced paid reasoning model in the same company
-
-Every fallback must remain inside the same company lane.
-
-## Model-node policy
-
-- experts timeout: `45000` ms
-- judge timeout: `60000` ms
-- governance timeout: `30000` ms
-- retries: `0`
-- success: connect to `End`
-- fallback: only a paid, non-Flash model from the same company
-- if no suitable same-company fallback exists: leave fallback unconnected and fail closed
+The route maintains eight distinct company lanes. A new ranking refresh may place different companies in those lanes; `lane-1` is not permanently Google/DeepSeek/etc.
 
 ## Candidate discovery
 
-OpenRouter remains the external candidate marketplace but is not queried by the Expert Worker during a live task.
+OpenRouter reasoning-capable text models are read using six server-side ranking signals:
 
-Primary discovery query:
+1. `intelligence-high-to-low`
+2. `latency-low-to-high`
+3. `throughput-high-to-low`
+4. `context-high-to-low`
+5. `pricing-low-to-high`
+6. `top-weekly`
+
+Hard exclusions remain:
+
+- OpenAI
+- Anthropic / Claude
+- model IDs containing `flash`
+- expired models
+- synthetic/random routers and ensemble wrappers
+
+Free models are allowed. Specific `:free` variants and zero-price reasoning models may enter a lane. `openrouter/free` is excluded from the auditable core because its internal random model choice would defeat preassigned company-lane independence.
+
+## Five Cloudflare metadata fields
+
+Cloudflare currently permits five custom metadata entries per request. They are all used for routing:
 
 ```text
-GET https://openrouter.ai/api/v1/models?supported_parameters=reasoning&output_modalities=text&sort=intelligence-high-to-low
+stage       = planner | expert | judge | governance
+lane        = 1..8
+capability  = domain-expert | evidence | risk | adversarial | systems | strategy | quantitative | coding | forecasting | legal | medical | finance | research | creative | synthesis
+depth       = standard | deep
+cost_mode   = free-first | balanced | quality-first
 ```
 
-Hard filters:
+The human-readable profession and mandate remain in the prompt and can be completely task-specific.
 
-1. reasoning-capable text model
-2. paid model; exclude `:free`
-3. exclude OpenAI
-4. exclude Anthropic / Claude
-5. exclude model IDs containing `flash`
-6. exclude expired/deprecated candidates
-7. company deduplication before panel assignment
+## Runtime architecture
 
-Ranking movement creates a candidate route version; it must not mutate the active deployed version directly.
+```text
+Question
+  -> deterministic initial task profile
+  -> Cloudflare-routed panel architect
+  -> dynamic panel plan
+       1-6 experts
+       0-2 judges
+       1-2 rounds
+       topology
+       professions
+       mandates
+       capabilities
+       cost mode
+  -> unique lane allocation
+  -> Cloudflare Dynamic Route
+       lane condition
+       cost-mode condition
+       stage/depth/capability condition
+       concrete model
+       same-company fallback
+  -> optional second-round cross-challenge
+  -> judge / final adjudicator
+  -> Worker validates actual model/provider/company receipts
+  -> final answer
+```
 
-## Initial company lanes
+## Cloudflare capabilities used
 
-Until the first ranking-driven refresh is deployed, the initial lanes may be:
+Production route uses:
 
-| Seat | Initial company lane |
-|---|---|
-| `expert-1` | Google |
-| `expert-2` | DeepSeek |
-| `expert-3` | Mistral |
-| `judge` | Alibaba/Qwen |
-| `governance` | Qwen or another approved paid family |
+- Conditional nodes
+- Model nodes
+- Model timeout
+- Model fallback
+- Percentage split reserved for explicit exploration/canary mode
+- Route versions
+- Deployments / rollback
+- BYOK provider keys
+- authenticated gateway
+- response model/provider metadata
 
-These are not permanent assignments.
+Rate Limit is intentionally not added because route-level rate limiting was explicitly disabled for this expert route. Budget Limit is not hard-coded because no fixed budget has been specified; cost behavior is instead selected per task through `cost_mode`.
 
-## Change, validation, and rollback
+## Free/paid behavior
 
-1. Update only a new Dynamic Route draft/version.
-2. Keep the currently deployed route unchanged.
-3. Run preview with representative domains, deep/standard reasoning, and failure cases.
-4. Verify `cf-aig-model`, `cf-aig-provider`, and Worker company-diversity receipts.
-5. Deploy only after preview passes.
-6. Keep the previous deployed route version for rollback.
+`free-first`:
+- choose the strongest eligible free model in the assigned company lane when available;
+- fall back inside the same company, including to a paid model if necessary.
 
-Dynamic Routing is Beta, so Worker-side fail-closed checks remain mandatory.
+`balanced`:
+- use multi-signal balanced scoring;
+- free or paid can win depending on quality, latency, throughput and context.
+
+`quality-first`:
+- prioritize the lane's strongest reasoning model regardless of price;
+- same-company fallback remains mandatory.
+
+High-complexity/high-stakes profiles normally become `quality-first`; explicit economy requests can become `free-first`.
+
+## Safe evolution
+
+A ranking refresh never mutates the live graph in place:
+
+```text
+OpenRouter refresh
+  -> score/filter/deduplicate
+  -> generate candidate route JSON
+  -> create new Cloudflare route version
+  -> validate version
+  -> preview/runtime acceptance
+  -> deploy version
+  -> retain prior version for rollback
+```
+
+Percentage split is reserved for explicit exploration (`cost_mode=explore`) and compares a champion/challenger **inside the same company lane**, preventing experimental traffic from breaking cross-company panel independence. Normal expert tasks never request `explore`.
+
+## Credentials
+
+Inference path:
+
+- `AI_GATEWAY_TOKEN` in Expert Worker
+- OpenRouter provider key stored in Cloudflare AI Gateway BYOK
+
+Control-plane writer:
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_AI_GATEWAY_API_TOKEN` with `AI Gateway Write`
+
+The control-plane token must never be placed in source code or chat.
+
+## Acceptance requirements
+
+Do not merge this PR until all of the following have real receipts:
+
+1. generated route version is accepted as valid by Cloudflare;
+2. eight distinct company lanes are present;
+3. a minimal task can use 1 expert + 1 judge;
+4. a complex task generates multiple task-specific professions;
+5. a two-round panel completes;
+6. a concrete `:free` model can execute successfully;
+7. paid models remain available for quality-first routing;
+8. `cf-aig-model` and `cf-aig-provider` are returned for every participant;
+9. expert/judge companies are distinct for a panel;
+10. forbidden companies/models fail closed;
+11. previous route version remains available for rollback.
