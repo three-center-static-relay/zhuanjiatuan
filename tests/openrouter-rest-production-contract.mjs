@@ -19,10 +19,10 @@ assert.doesNotMatch(relay,/https:\/\/openrouter\.ai\/api\/v1\/chat\/completions/
 assert.match(gateway,/gateway\.ai\.cloudflare\.com/);
 assert.match(gateway,/gateway\.ai\.cloudflare\.com\/v1/);
 assert.match(gateway,/cf-aig-authorization/);
-assert.match(gateway,/cf-aig-skip-cache/);
-assert.match(gateway,/cf-aig-collect-log/);
+assert.doesNotMatch(gateway,/cf-aig-skip-cache/);
+assert.doesNotMatch(gateway,/cf-aig-collect-log/);
 assert.match(gateway,/cf-aig-max-attempts/);
 assert.doesNotMatch(source,/mcp\.openrouter\.ai\/mcp/);
 assert.doesNotMatch(source,/openrouter_mcp/i);
 
-console.log(JSON.stringify({ok:true,suite:"openrouter-rest-production-contract",transport:"cloudflare-ai-gateway-openrouter",mcp_runtime:false,tools:false,web:false,cache:false,request_logging:false,gateway_retries:0}));
+console.log(JSON.stringify({ok:true,suite:"openrouter-rest-production-contract",transport:"cloudflare-ai-gateway-openrouter",mcp_runtime:false,tools:false,web:false,cache:"gateway-default",request_logging:"gateway-default",gateway_retries:0,dynamic_routing:false}));
