@@ -31,6 +31,15 @@ export default {
       });
     }
 
+    if (request.method === "GET" && url.pathname === "/v1/selftest") {
+      return json({
+        ok: true,
+        runtime: "langgraph-orchestrator",
+        gateway_configured: Boolean(env.AI_GATEWAY_URL),
+        production_ready: Boolean(env.AI_GATEWAY_URL)
+      });
+    }
+
     if (request.method === "POST" && url.pathname === "/v1/run") {
       const input = await request.json().catch(() => null);
       if (!input) return json({ ok: false, error: "INVALID_JSON" }, 400);
