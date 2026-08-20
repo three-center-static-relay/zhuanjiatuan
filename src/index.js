@@ -1,5 +1,6 @@
 import { createOrchestrator } from "./langgraph-orchestrator.js";
 import { routeExpertRequest } from "./ai-gateway-router.js";
+import { buildSelftest } from "./selftest.js";
 
 const json = (body, status = 200) =>
   Response.json(body, { status, headers: { "cache-control": "no-store" } });
@@ -9,10 +10,7 @@ const planned = async () => ({ ok: true, status: "planned" });
 const createRuntime = (env) => createOrchestrator({
   evidence: { plan: planned },
   expert: {
-    plan: async (state) => routeExpertRequest({
-      request: state.task,
-      env
-    })
+    plan: async (state) => routeExpertRequest({ request: state.task, env })
   },
   compute: { plan: planned },
   governance: { validateIntent: async () => ({ ok: true }) }
@@ -32,12 +30,7 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/v1/selftest") {
-      return json({
-        ok: true,
-        runtime: "langgraph-orchestrator",
-        gateway_configured: Boolean(env.AI_GATEWAY_URL),
-        production_ready: Boolean(env.AI_GATEWAY_URL)
-      });
+      return json(buildSelftest(env));
     }
 
     if (request.method === "POST" && url.pathname === "/v1/run") {
