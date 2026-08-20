@@ -29,6 +29,9 @@ assert.equal(pkg.dependencies?.["@langchain/core"], "1.2.6");
 assert.match(runtimeSource, /from "@langchain\/langgraph"/);
 assert.match(runtimeSource, /new StateGraph\(/);
 assert.match(runtimeSource, /https:\/\/expert\.internal\/v1\/run/);
+assert.match(runtimeSource, /buildSupervisorValidationGraph/);
+assert.match(runtimeSource, /supervisor-validate/);
+assert.match(runtimeSource, /model_invoked: false/);
 assert.match(adminSource, /\/v1\/langgraph\/run/);
 assert.match(adminSource, /service-binding internal only/);
 
