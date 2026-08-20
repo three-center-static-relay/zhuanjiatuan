@@ -55,7 +55,7 @@ assert.doesNotMatch(wrangler,/OPENROUTER_API_KEY|DEEPSEEK_API_KEY|TENCENT_TOKENH
 assert.match(docs,/OpenRouter/);
 assert.match(docs,/DeepSeek native/);
 assert.match(docs,/OpenRouter \+ native DeepSeek only/);
-assert.doesNotMatch(docs,/Tencent TokenHub.*admitted/i);
+assert.match(docs,/No Tencent TokenHub/);
 
 await assert.rejects(()=>dynamicChatEndpoint({AI_GATEWAY_ID:"test",AI_GATEWAY_ROUTE_FAMILY:"expert-panel",CLOUDFLARE_ACCOUNT_ID:"account"}),e=>e?.message==="AI_GATEWAY_NOT_CONFIGURED"&&e?.status===503);
 assert.throws(()=>aiGatewayRequestHeaders({},1000,meta),e=>e?.message==="AI_GATEWAY_NOT_CONFIGURED");
