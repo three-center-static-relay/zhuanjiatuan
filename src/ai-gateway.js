@@ -1,6 +1,6 @@
 const DEFAULT_AI_GATEWAY_ID = "test";
 const DEFAULT_ROUTE_FAMILY = "expert-panel";
-const DEFAULT_MODEL_SOURCE_POLICY = "openrouter-plus-deepseek-only";
+const DEFAULT_MODEL_SOURCE_POLICY = "workers-ai-openrouter-deepseek-huggingface-only";
 const MAX_CUSTOM_METADATA = 5;
 const ROUTE_KEYS = ["plan","general","code","regulated","research","strategy","creative"];
 
@@ -140,8 +140,11 @@ export function aiGatewayDescriptor(env) {
     provider: "dynamic",
     inference_transport: "cloudflare-ai-gateway-dynamic-route",
     model_source_policy: String(env?.MODEL_SOURCE_POLICY || DEFAULT_MODEL_SOURCE_POLICY).trim(),
-    allowed_model_sources: ["openrouter","deepseek"],
-    upstream_keys: "cloudflare-byok-openrouter-deepseek-only",
+    allowed_model_sources: ["workers-ai","openrouter","deepseek","huggingface"],
+    provider_key_sources: ["openrouter","deepseek","huggingface"],
+    keyless_model_sources: ["workers-ai"],
+    workers_ai_free_only: String(env?.WORKERS_AI_FREE_ONLY || "true").toLowerCase() !== "false",
+    upstream_keys: "cloudflare-byok-openrouter-deepseek-huggingface-plus-workers-ai",
     cache: "gateway-default",
     request_logging: "gateway-default",
     worker_retries: 0,

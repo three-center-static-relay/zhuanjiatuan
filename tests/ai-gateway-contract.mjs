@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {aiGatewayConfigured,aiGatewayDescriptor,aiGatewayRequestHeaders,aiGatewayRouteFamily,aiGatewayRouteForMetadata,dynamicChatEndpoint,dynamicRouteModel,routeMetadata,routeRegistry,routeShardForMetadata} from "../src/ai-gateway.js";
-const env={AI_GATEWAY_ID:"test",AI_GATEWAY_ROUTE_FAMILY:"expert-panel",CLOUDFLARE_ACCOUNT_ID:"account",AI_GATEWAY_TOKEN:"test-gateway-token",MODEL_SOURCE_POLICY:"openrouter-plus-deepseek-only"};
+const env={AI_GATEWAY_ID:"test",AI_GATEWAY_ROUTE_FAMILY:"expert-panel",CLOUDFLARE_ACCOUNT_ID:"account",AI_GATEWAY_TOKEN:"test-gateway-token",MODEL_SOURCE_POLICY:"workers-ai-openrouter-deepseek-huggingface-only",WORKERS_AI_FREE_ONLY:"true"};
 assert.equal(aiGatewayConfigured(env),true);
 assert.equal(aiGatewayRouteFamily(env),"expert-panel");
 assert.throws(()=>dynamicRouteModel(env),e=>e?.message==="AI_GATEWAY_ROUTE_METADATA_REQUIRED");
@@ -44,25 +44,30 @@ assert.equal(descriptor.legacy_base_route_removed,true);
 assert.equal(descriptor.legacy_route,false);
 assert.equal(descriptor.route,null);
 assert.equal(descriptor.route_family,"expert-panel");
-assert.equal(descriptor.model_source_policy,"openrouter-plus-deepseek-only");
-assert.deepEqual(descriptor.allowed_model_sources,["openrouter","deepseek"]);
-assert.equal(descriptor.upstream_keys,"cloudflare-byok-openrouter-deepseek-only");
+assert.equal(descriptor.model_source_policy,"workers-ai-openrouter-deepseek-huggingface-only");
+assert.deepEqual(descriptor.allowed_model_sources,["workers-ai","openrouter","deepseek","huggingface"]);
+assert.deepEqual(descriptor.provider_key_sources,["openrouter","deepseek","huggingface"]);
+assert.deepEqual(descriptor.keyless_model_sources,["workers-ai"]);
+assert.equal(descriptor.workers_ai_free_only,true);
+assert.equal(descriptor.upstream_keys,"cloudflare-byok-openrouter-deepseek-huggingface-plus-workers-ai");
 assert.deepEqual(descriptor.route_shards,["plan","general","code","regulated","research","strategy","creative"]);
 
 // Provider credentials are centralized in Cloudflare AI Gateway BYOK. The Expert
-// Worker holds only the Gateway auth token, never OpenRouter or DeepSeek keys.
+// Worker holds only the Gateway auth token; Workers AI does not require a third-party key.
 const wrangler=fs.readFileSync(new URL("../wrangler.jsonc",import.meta.url),"utf8");
 const docs=fs.readFileSync(new URL("../docs/expert-v4.1.md",import.meta.url),"utf8");
 assert.match(wrangler,/"secrets"\s*:\s*\{\s*"required"\s*:\s*\["AI_GATEWAY_TOKEN"\]\s*\}/s);
-assert.match(wrangler,/"MODEL_SOURCE_POLICY"\s*:\s*"openrouter-plus-deepseek-only"/);
-assert.doesNotMatch(wrangler,/workers-ai-openrouter-deepseek-huggingface-only|OPENROUTER_API_KEY|DEEPSEEK_API_KEY|HUGGINGFACE_API_KEY|TENCENT_TOKENHUB_API_KEY/);
+assert.match(wrangler,/"MODEL_SOURCE_POLICY"\s*:\s*"workers-ai-openrouter-deepseek-huggingface-only"/);
+assert.match(wrangler,/"WORKERS_AI_FREE_ONLY"\s*:\s*"true"/);
+assert.doesNotMatch(wrangler,/OPENROUTER_API_KEY|DEEPSEEK_API_KEY|HUGGINGFACE_API_KEY|TENCENT_TOKENHUB_API_KEY/);
+assert.match(docs,/Cloudflare Workers AI free models/);
 assert.match(docs,/OpenRouter/);
 assert.match(docs,/DeepSeek native/);
-assert.match(docs,/OpenRouter \+ native DeepSeek only/);
-assert.match(docs,/Hugging Face is intelligence-only/);
-assert.match(docs,/Cloudflare Workers AI is not a production Expert model source/);
+assert.match(docs,/Hugging Face/);
+assert.match(docs,/Company diversity is based on the \*\*model owner\*\*/);
+assert.match(docs,/fail\/fallback rather than deliberately purchase Workers AI inference/);
 assert.match(docs,/No Tencent TokenHub/);
 
 await assert.rejects(()=>dynamicChatEndpoint({AI_GATEWAY_ID:"test",AI_GATEWAY_ROUTE_FAMILY:"expert-panel",CLOUDFLARE_ACCOUNT_ID:"account"}),e=>e?.message==="AI_GATEWAY_NOT_CONFIGURED"&&e?.status===503);
 assert.throws(()=>aiGatewayRequestHeaders({},1000,meta),e=>e?.message==="AI_GATEWAY_NOT_CONFIGURED");
-console.log(JSON.stringify({ok:true,suite:"ai-gateway-contract-v4.1",authenticated_gateway:true,dynamic_routing:true,registry_driven:true,provider_keys_centralized_in_cloudflare:true,provider_policy:"openrouter-plus-deepseek-only",allowed_model_sources:["openrouter","deepseek"],legacy_base_route_removed:true,custom_metadata_max:5}));
+console.log(JSON.stringify({ok:true,suite:"ai-gateway-contract-v4.1",authenticated_gateway:true,dynamic_routing:true,registry_driven:true,provider_keys_centralized_in_cloudflare:true,provider_policy:"workers-ai-openrouter-deepseek-huggingface-only",allowed_model_sources:["workers-ai","openrouter","deepseek","huggingface"],workers_ai_free_only:true,legacy_base_route_removed:true,custom_metadata_max:5}));
