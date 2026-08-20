@@ -1,4 +1,4 @@
-// Exact-head Cloudflare preview trigger for shared supervisor validation runtime.
+// Exact-main Cloudflare production receipt trigger for shared supervisor validation runtime.
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { Annotation, StateGraph, START, END } from "@langchain/langgraph";
