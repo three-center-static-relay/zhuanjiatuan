@@ -8,7 +8,7 @@ const capability=(input,observedAt,configured)=>({
   reliability:{score:0,basis:"unverified-no-bound-runtime-receipt"},accuracy:{score:0,basis:"unverified-no-bound-runtime-receipt"},freshness:{observed_at:observedAt,ttl_seconds:1800},
   health:{status:configured?"configured-unverified":"unavailable",checked_at:observedAt},fitness:{quality:0,reliability:0,cost:0,latency:0,security:0,adaptability:0,complexity:0},
   trust:{level:"T0",status:configured?"unverified":"quarantined"},verification:{status:configured?"configured-unverified":"unconfigured",scope:"configuration-only",verified_at:null,receipt_digest:null,sample_size:0},
-  license:"provider-specific",jurisdiction:["global"],first_seen:"2026-08-18T00:00:00.000Z",last_verified:null
+  license:"provider-specific",jurisdiction:["global"],first_seen:"2026-08-18T00:00:00.000Z",last_verified:observedAt
 });
 
 export function expertCapabilityManifest({configured=false}={}){
