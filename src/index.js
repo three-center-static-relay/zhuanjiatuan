@@ -2,6 +2,7 @@ import { createOrchestrator } from "./langgraph-orchestrator.js";
 import { routeExpertRequest } from "./ai-gateway-router.js";
 import { buildSelftest } from "./selftest.js";
 import { runtimeReceipt } from "./runtime-receipt.js";
+import { evaluatePromotionGate } from "./promotion-gate.js";
 
 const json = (body, status = 200) =>
   Response.json(body, { status, headers: { "cache-control": "no-store" } });
@@ -31,13 +32,18 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/v1/selftest") {
-      return json({
-        ...buildSelftest(env),
-        receipt: runtimeReceipt({
-          status: env.AI_GATEWAY_URL ? "candidate-ready" : "blocked",
-          checks: { langgraph: true, gateway: Boolean(env.AI_GATEWAY_URL) }
-        })
+      const selftest = buildSelftest(env);
+      const receipt = runtimeReceipt({
+        status: env.AI_GATEWAY_URL ? "candidate-ready" : "blocked",
+        checks: { langgraph: true, gateway: Boolean(env.AI_GATEWAY_URL) }
       });
+      const promotion = evaluatePromotionGate({
+        selftest,
+        capability: { ok: true },
+        runtime: { ok: receipt.status !== "blocked" },
+        gatewayConfigured: Boolean(env.AI_GATEWAY_URL)
+      });
+      return json({ selftest, receipt, promotion });
     }
 
     if (request.method === "POST" && url.pathname === "/v1/run") {
