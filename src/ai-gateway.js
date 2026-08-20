@@ -1,5 +1,6 @@
 const DEFAULT_AI_GATEWAY_ID = "test";
 const DEFAULT_ROUTE_FAMILY = "expert-panel";
+const DEFAULT_MODEL_SOURCE_POLICY = "openrouter-plus-deepseek-only";
 const MAX_CUSTOM_METADATA = 5;
 const ROUTE_KEYS = ["plan","general","code","regulated","research","strategy","creative"];
 
@@ -138,7 +139,9 @@ export function aiGatewayDescriptor(env) {
     authenticated_gateway: true,
     provider: "dynamic",
     inference_transport: "cloudflare-ai-gateway-dynamic-route",
-    upstream_keys: "cloudflare-byok-or-custom-provider",
+    model_source_policy: String(env?.MODEL_SOURCE_POLICY || DEFAULT_MODEL_SOURCE_POLICY).trim(),
+    allowed_model_sources: ["openrouter","deepseek"],
+    upstream_keys: "cloudflare-byok-openrouter-deepseek-only",
     cache: "gateway-default",
     request_logging: "gateway-default",
     worker_retries: 0,
