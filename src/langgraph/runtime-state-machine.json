@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "runtime": "cloudflare-compatible",
+  "state_machine": {
+    "entry": "governance",
+    "nodes": [
+      "governance",
+      "evidence",
+      "expert",
+      "compute",
+      "review"
+    ],
+    "transitions": {
+      "governance": ["evidence", "expert", "compute"],
+      "evidence": ["expert", "compute", "review"],
+      "expert": ["compute", "review"],
+      "compute": ["review"],
+      "review": []
+    }
+  },
+  "safety": {
+    "fail_closed": true,
+    "max_retry": 2,
+    "require_governance": true
+  }
+}
