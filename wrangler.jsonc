@@ -1,12 +1,28 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "expert-worker",
-  "main": "src/legacy-removed-entry.js",
-  "compatibility_date": "2026-08-20",
+  "main": "src/admin-entry.js",
+  "compatibility_date": "2026-08-18",
   "compatibility_flags": ["nodejs_compat"],
-  "workers_dev": true,
+  "workers_dev": false,
+  "preview_urls": false,
   "version_metadata": {"binding": "CF_VERSION_METADATA"},
-  "build": {"command": "node --check src/legacy-removed-entry.js && node tests/legacy-removed-contract.mjs"},
-  "vars": {"LEGACY_EXPERT_PANEL_REMOVED": "true"},
+  "secrets": {"required": ["AI_GATEWAY_TOKEN"]},
+  "durable_objects": {"bindings": [{"name": "CENTER_GATE", "class_name": "CenterGate"}]},
+  "exports": {"CenterGate": {"type": "durable-object", "storage":"sqlite"}},
+  "vars": {
+    "CLOUDFLARE_ACCOUNT_ID": "e3aec027af13c557bbcb831d29c1e7b4",
+    "AI_GATEWAY_ID": "test",
+    "AI_GATEWAY_ROUTE_FAMILY": "expert-panel",
+    "AI_GATEWAY_MAX_ATTEMPTS": "1",
+    "EXPERT_MAX_LANES": "8",
+    "EXPERT_MAX_EXPERTS": "8",
+    "EXPERT_MAX_JUDGES": "2",
+    "EXPERT_MAX_ROUNDS": "3",
+    "EXPERT_MAX_CONCURRENT_TASKS": "2",
+    "EXPERT_INTERNAL_CONCURRENCY": "6",
+    "EXPERT_MAX_TASK_SECONDS": "600",
+    "EXPERT_MAX_STAGE_MS": "120000"
+  },
   "observability": {"enabled":true,"logs":{"enabled":true,"head_sampling_rate":1},"traces":{"enabled":true,"head_sampling_rate":0.02}}
 }
