@@ -1,4 +1,5 @@
 import { createOrchestrator } from "./langgraph-orchestrator.js";
+import { createBrainState } from "./langgraph-brain-state.js";
 import { routeExpertRequest } from "./ai-gateway-router.js";
 import { buildSelftest } from "./selftest.js";
 import { runtimeReceipt } from "./runtime-receipt.js";
@@ -15,7 +16,9 @@ const createRuntime = (env) => createOrchestrator({
     plan: async (state) => routeExpertRequest({ request: state.task, env })
   },
   compute: { plan: planned },
-  governance: { validateIntent: async () => ({ ok: true }) }
+  governance: {
+    validateIntent: async (state) => createBrainState(state.task)
+  }
 });
 
 export default {
@@ -26,7 +29,7 @@ export default {
       return json({
         ok: true,
         service: "expert-worker",
-        runtime: "langgraph-orchestrator",
+        runtime: "cloudflare-langgraph-brain-v1",
         status: env.AI_GATEWAY_URL ? "ai-gateway-configured" : "ai-gateway-missing"
       });
     }
