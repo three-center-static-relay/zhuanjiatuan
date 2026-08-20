@@ -1,5 +1,6 @@
 {
   // production receipt trigger: Expert V4.2 lane-pair exact-main
+  // Cloudflare preview trigger: official LangGraph runtime PR #49
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "expert-worker",
   "main": "src/admin-entry.js",
