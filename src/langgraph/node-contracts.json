@@ -1,0 +1,22 @@
+{
+  "orchestrator": "langgraph",
+  "nodes": {
+    "governance": {
+      "role": "policy_and_audit"
+    },
+    "evidence": {
+      "role": "data_and_sources"
+    },
+    "expert": {
+      "role": "reasoning_models"
+    },
+    "compute": {
+      "role": "simulation_and_calculation"
+    }
+  },
+  "routing": {
+    "dynamic": true,
+    "feedback_loop": true,
+    "cost_aware": true
+  }
+}
