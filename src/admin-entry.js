@@ -1,4 +1,5 @@
 import app,{CenterGate} from "./guard.js";
+import {LANGGRAPH_RUNTIME,probeLangGraphRuntime,runLangGraphRequest} from "./langgraph-runtime.js";
 export {CenterGate};
 
 // exact-main production receipt trigger; no runtime behavior change.
@@ -33,6 +34,7 @@ async function adminContext(env,ctx){
     admin_read_only:true,
     observed_at:new Date().toISOString(),
     runtime_version:{id:version.id||null,tag:version.tag||null,timestamp:version.timestamp||null},
+    langgraph:{runtime:LANGGRAPH_RUNTIME,mode:"internal-canary",endpoint:"/v1/langgraph/run",health_endpoint:"/v1/langgraph/health",service_binding_only:true},
     health:health.body,
     source:source.body,
     acceptance:acceptance.body,
@@ -42,12 +44,26 @@ async function adminContext(env,ctx){
   },ok?200:503);
 }
 
+function internalOnly(url){return url.hostname==="expert.internal"}
+
 export default{
   async fetch(req,env,ctx){
     const url=new URL(req.url);
     if(req.method==="GET"&&url.pathname==="/v1/admin/context"){
-      if(url.hostname!=="expert.internal")return json({ok:false,error:"POLICY_DENIED",message:"admin context is service-binding internal only"},403);
+      if(!internalOnly(url))return json({ok:false,error:"POLICY_DENIED",message:"admin context is service-binding internal only"},403);
       return adminContext(env,ctx);
+    }
+    if(req.method==="GET"&&url.pathname==="/v1/langgraph/health"){
+      if(!internalOnly(url))return json({ok:false,error:"POLICY_DENIED",message:"LangGraph runtime is service-binding internal only"},403);
+      const probe=await probeLangGraphRuntime().catch(error=>({ok:false,runtime:LANGGRAPH_RUNTIME,error:String(error?.message||error)}));
+      return json(probe,probe.ok?200:503);
+    }
+    if(req.method==="POST"&&url.pathname==="/v1/langgraph/run"){
+      if(!internalOnly(url))return json({ok:false,error:"POLICY_DENIED",message:"LangGraph runtime is service-binding internal only"},403);
+      const input=await req.json().catch(()=>null);
+      if(!input)return json({ok:false,error:"INVALID_JSON"},400);
+      const result=await runLangGraphRequest(input,env,ctx).catch(error=>({ok:false,runtime:LANGGRAPH_RUNTIME,status:"failed",error:String(error?.message||error)}));
+      return json(result,result.ok?200:result.status==="rejected"?400:502);
     }
     return app.fetch(req,env,ctx);
   }
