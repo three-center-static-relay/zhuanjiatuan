@@ -1,0 +1,23 @@
+{
+  "name": "four-center-langgraph-contract",
+  "version": "1.0",
+  "nodes": {
+    "governance": "policy_and_security_gate",
+    "evidence": "information_center",
+    "expert": "expert_center",
+    "compute": "simulation_center"
+  },
+  "flow": [
+    "governance",
+    "evidence",
+    "expert",
+    "compute",
+    "governance"
+  ],
+  "principles": [
+    "fail_closed",
+    "auditable",
+    "dynamic_routing",
+    "low_complexity"
+  ]
+}
