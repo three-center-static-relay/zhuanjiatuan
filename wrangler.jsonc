@@ -1,5 +1,6 @@
 {
   // production receipt trigger: Expert V4.2 lane-pair exact-main
+  // Cloudflare preview trigger: official LangGraph runtime PR #49
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "expert-worker",
   "main": "src/admin-entry.js",
@@ -27,7 +28,9 @@
     "EXPERT_MAX_CONCURRENT_TASKS": "2",
     "EXPERT_INTERNAL_CONCURRENCY": "6",
     "EXPERT_MAX_TASK_SECONDS": "600",
-    "EXPERT_MAX_STAGE_MS": "120000"
+    "EXPERT_MAX_STAGE_MS": "120000",
+    "LANGGRAPH_RUNTIME": "@langchain/langgraph@1.4.10",
+    "LANGGRAPH_MODE": "internal-canary"
   },
   "observability": {"enabled":true,"logs":{"enabled":true,"head_sampling_rate":1},"traces":{"enabled":true,"head_sampling_rate":0.02}}
 }
