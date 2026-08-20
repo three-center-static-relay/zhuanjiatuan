@@ -6,9 +6,14 @@ const json = (body, status = 200) =>
 
 const planned = async () => ({ ok: true, status: "planned" });
 
-const orchestrator = createOrchestrator({
+const createRuntime = (env) => createOrchestrator({
   evidence: { plan: planned },
-  expert: { plan: async (state) => routeExpertRequest({ request: state.task, env: globalThis.env || {} }) },
+  expert: {
+    plan: async (state) => routeExpertRequest({
+      request: state.task,
+      env
+    })
+  },
   compute: { plan: planned },
   governance: { validateIntent: async () => ({ ok: true }) }
 });
@@ -22,15 +27,14 @@ export default {
         ok: true,
         service: "expert-worker",
         runtime: "langgraph-orchestrator",
-        status: "candidate-ai-gateway-ready"
+        status: env.AI_GATEWAY_URL ? "ai-gateway-configured" : "ai-gateway-missing"
       });
     }
 
     if (request.method === "POST" && url.pathname === "/v1/run") {
       const input = await request.json().catch(() => null);
       if (!input) return json({ ok: false, error: "INVALID_JSON" }, 400);
-      globalThis.env = env;
-      return json(await orchestrator.run(input));
+      return json(await createRuntime(env).run(input));
     }
 
     return json({ ok: false, error: "NOT_FOUND" }, 404);
