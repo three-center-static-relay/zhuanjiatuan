@@ -1,12 +1,12 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "expert-worker",
-  "main": "src/legacy-removed-entry.js",
+  "main": "src/index.js",
   "compatibility_date": "2026-08-20",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "version_metadata": {"binding": "CF_VERSION_METADATA"},
-  "build": {"command": "node --check src/legacy-removed-entry.js && node tests/legacy-removed-contract.mjs"},
-  "vars": {"LEGACY_EXPERT_PANEL_REMOVED": "true"},
+  "build": {"command": "node --check src/index.js"},
+  "vars": {"EXPERT_RUNTIME": "langgraph-candidate"},
   "observability": {"enabled":true,"logs":{"enabled":true,"head_sampling_rate":1},"traces":{"enabled":true,"head_sampling_rate":0.02}}
 }
