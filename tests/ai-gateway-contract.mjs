@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import {aiGatewayConfigured,aiGatewayDescriptor,aiGatewayRequestHeaders,aiGatewayRouteFamily,aiGatewayRouteForMetadata,dynamicChatEndpoint,dynamicRouteModel,routeMetadata,routeRegistry,routeShardForMetadata} from "../src/ai-gateway.js";
 const env={AI_GATEWAY_ID:"test",AI_GATEWAY_ROUTE_FAMILY:"expert-panel",CLOUDFLARE_ACCOUNT_ID:"account",AI_GATEWAY_TOKEN:"test-gateway-token"};
 assert.equal(aiGatewayConfigured(env),true);
@@ -45,6 +46,17 @@ assert.equal(descriptor.route,null);
 assert.equal(descriptor.route_family,"expert-panel");
 assert.deepEqual(descriptor.route_shards,["plan","general","code","regulated","research","strategy","creative"]);
 
+// Provider credentials are centralized in Cloudflare AI Gateway BYOK. The Expert
+// Worker holds only the Gateway auth token, never OpenRouter or DeepSeek keys.
+const wrangler=fs.readFileSync(new URL("../wrangler.jsonc",import.meta.url),"utf8");
+const docs=fs.readFileSync(new URL("../docs/expert-v4.1.md",import.meta.url),"utf8");
+assert.match(wrangler,/"secrets"\s*:\s*\{\s*"required"\s*:\s*\["AI_GATEWAY_TOKEN"\]\s*\}/s);
+assert.doesNotMatch(wrangler,/OPENROUTER_API_KEY|DEEPSEEK_API_KEY|TENCENT_TOKENHUB_API_KEY/);
+assert.match(docs,/OpenRouter/);
+assert.match(docs,/DeepSeek native/);
+assert.match(docs,/OpenRouter \+ native DeepSeek only/);
+assert.doesNotMatch(docs,/Tencent TokenHub.*admitted/i);
+
 await assert.rejects(()=>dynamicChatEndpoint({AI_GATEWAY_ID:"test",AI_GATEWAY_ROUTE_FAMILY:"expert-panel",CLOUDFLARE_ACCOUNT_ID:"account"}),e=>e?.message==="AI_GATEWAY_NOT_CONFIGURED"&&e?.status===503);
 assert.throws(()=>aiGatewayRequestHeaders({},1000,meta),e=>e?.message==="AI_GATEWAY_NOT_CONFIGURED");
-console.log(JSON.stringify({ok:true,suite:"ai-gateway-contract-v4.1",authenticated_gateway:true,dynamic_routing:true,registry_driven:true,legacy_base_route_removed:true,custom_metadata_max:5}));
+console.log(JSON.stringify({ok:true,suite:"ai-gateway-contract-v4.1",authenticated_gateway:true,dynamic_routing:true,registry_driven:true,provider_keys_centralized_in_cloudflare:true,provider_policy:"openrouter-plus-deepseek-only",legacy_base_route_removed:true,custom_metadata_max:5}));
