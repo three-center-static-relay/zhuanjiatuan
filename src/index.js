@@ -1,19 +1,20 @@
 import { createOrchestrator } from "./langgraph-orchestrator.js";
+import { routeExpertRequest } from "./ai-gateway-router.js";
 
 const json = (body, status = 200) =>
   Response.json(body, { status, headers: { "cache-control": "no-store" } });
 
-const noop = async () => ({ ok: true, status: "planned" });
+const planned = async () => ({ ok: true, status: "planned" });
 
 const orchestrator = createOrchestrator({
-  evidence: { plan: noop },
-  expert: { plan: noop },
-  compute: { plan: noop },
+  evidence: { plan: planned },
+  expert: { plan: async (state) => routeExpertRequest({ request: state.task, env: globalThis.env || {} }) },
+  compute: { plan: planned },
   governance: { validateIntent: async () => ({ ok: true }) }
 });
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const url = new URL(request.url);
 
     if (request.method === "GET" && url.pathname === "/health") {
@@ -21,13 +22,14 @@ export default {
         ok: true,
         service: "expert-worker",
         runtime: "langgraph-orchestrator",
-        status: "candidate"
+        status: "candidate-ai-gateway-ready"
       });
     }
 
     if (request.method === "POST" && url.pathname === "/v1/run") {
       const input = await request.json().catch(() => null);
       if (!input) return json({ ok: false, error: "INVALID_JSON" }, 400);
+      globalThis.env = env;
       return json(await orchestrator.run(input));
     }
 
