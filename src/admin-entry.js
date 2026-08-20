@@ -1,6 +1,7 @@
 import app,{CenterGate} from "./guard.js";
 export {CenterGate};
 
+// exact-main production receipt trigger; no runtime behavior change.
 const ORIGIN="https://expert.internal";
 const SERVICE="expert-worker";
 const json=(body,status=200)=>Response.json(body,{status,headers:{"cache-control":"no-store"}});
