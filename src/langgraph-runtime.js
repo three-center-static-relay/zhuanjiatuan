@@ -1,3 +1,4 @@
+// Exact-main Cloudflare production receipt trigger for shared supervisor validation runtime.
 import guardedApp from "./guard.js";
 import { Annotation, StateGraph, START, END } from "@langchain/langgraph";
 
