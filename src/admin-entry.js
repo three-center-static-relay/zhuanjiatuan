@@ -72,7 +72,7 @@ async function routeProbe(req,env){
     const provider=cleanHeader(response.headers.get("cf-aig-provider"));
     const model=cleanHeader(response.headers.get("cf-aig-model"));
     const ok=response.status===200&&Boolean(provider)&&Boolean(model);
-    return json({ok,probe:"expert-dynamic-route-v1",lane,gateway_http_status:response.status,provider:model?provider:null,model:model||null,content_scrbed:true,request_fixed:true,tools_used:false,web_used:false,secrets_redacted:true,error_code:ok?null:`GATEWAY_HTTP_${response.status}`},ok?200:502);
+    return json({ok,probe:"expert-dynamic-route-v1",lane,gateway_http_status:response.status,provider:model?provider:null,model:model||null,content_scrubbed:true,request_fixed:true,tools_used:false,web_used:false,secrets_redacted:true,error_code:ok?null:`GATEWAY_HTTP_${response.status}`},ok?200:502);
   }catch(error){return json({ok:false,probe:"expert-dynamic-route-v1",lane,error_code:error?.name==="AbortError"?"GATEWAY_TIMEOUT":"GATEWAY_REQUEST_FAILED",content_scrubbed:true,request_fixed:true,tools_used:false,web_used:false,secrets_redacted:true},502)}finally{clearTimeout(timer)}
 }
 
