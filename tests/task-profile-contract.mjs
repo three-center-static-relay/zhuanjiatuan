@@ -5,7 +5,7 @@ const legal=profileExpertTask({prompt:"请对这份合同的民事法律风险�
 assert.equal(legal.task_domain,"legal");
 assert.equal(legal.task_type,"analysis");
 assert.equal(legal.reasoning_depth,"deep");
-assert.equal(legal.cost_priority,"quality");
+assert.equal(legal.cost_priority,"balanced");
 
 const coding=profileExpertTask({prompt:"Review this Cloudflare Worker API code and find the bug."});
 assert.equal(coding.task_domain,"coding");
@@ -19,15 +19,15 @@ const explicit=profileExpertTask({
   reasoning_depth:"deep",
   context_size:"long",
   latency_priority:"fast",
-  cost_priority:"balanced"
+  cost_priority:"quality"
 });
 assert.deepEqual(explicit,{
-  task_domain:"finance",task_type:"comparison",complexity:"high",reasoning_depth:"deep",context_size:"long",latency_priority:"fast",cost_priority:"balanced"
+  task_domain:"finance",task_type:"comparison",complexity:"high",reasoning_depth:"deep",context_size:"long",latency_priority:"fast",cost_priority:"quality"
 });
 
 const invalid=profileExpertTask({prompt:"hello",task_domain:"arbitrary-provider",cost_priority:"free-at-any-cost"});
 assert.equal(invalid.task_domain,"general");
-assert.equal(invalid.cost_priority,"quality");
+assert.equal(invalid.cost_priority,"balanced");
 assert.ok(TASK_PROFILE_SCHEMA.task_domain.includes("quantitative"));
 
 console.log("task profile contract: pass");
