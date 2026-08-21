@@ -5,6 +5,7 @@ export {CenterGate};
 
 const ORIGIN="https://expert.internal";
 const SERVICE="expert-worker";
+const SOFT_EXECUTION_POLICY=`Execution policy:\n- Prioritize price-performance: prefer the lowest-cost/lower-latency option that is still sufficiently reliable and capable for the task; use a stronger or more expensive model only when it materially improves correctness, robustness, or decision quality. There is no hard spending cap.\n- Control answer length softly: match detail to task complexity, maximize information density, avoid unnecessary repetition, but never truncate material reasoning or omit necessary caveats merely to save tokens or cost. Do not use token limits as a quality or cost-control mechanism.\n- Tools are forbidden. Do not call tools, functions, browsers, web search, external retrieval, code execution, or external actions. Work only from the supplied task/context and model reasoning.\n- Preserve uncertainty, counterarguments, and decision-relevant assumptions when material.`;
 const json=(body,status=200)=>Response.json(body,{status,headers:{"cache-control":"no-store"}});
 const int=(v,d)=>{const n=Number(v);return Number.isFinite(n)?Math.trunc(n):d};
 const clamp=(v,lo,hi,d)=>Math.max(lo,Math.min(hi,int(v,d)));
@@ -60,6 +61,21 @@ function requestScopedPanelEnv(input,env){
   return {...env,EXPERT_MAX_LANES:String(Math.min(configuredLanes,Math.max(2,total))),EXPERT_MAX_EXPERTS:String(experts),EXPERT_MAX_JUDGES:String(judges)};
 }
 
+function normalizeExpertInput(input){
+  const normalized={...input};
+  delete normalized.max_tokens;
+  delete normalized.max_output_tokens;
+  delete normalized.token_budget;
+  delete normalized.max_paid_usd;
+  const prompt=String(input?.prompt||"").trim();
+  if(prompt)normalized.prompt=`${prompt}\n\n${SOFT_EXECUTION_POLICY}`;
+  if(!String(normalized.cost_priority||"").trim())normalized.cost_priority="balanced";
+  if(!String(normalized.cost_mode||"").trim())normalized.cost_mode="balanced";
+  normalized.tools=false;
+  normalized.web=false;
+  return normalized;
+}
+
 async function routeProbe(req,env){
   const input=await req.json().catch(()=>null);
   const lane=Math.trunc(Number(input?.lane));
@@ -68,7 +84,7 @@ async function routeProbe(req,env){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
   try{
     const endpoint=await dynamicChatEndpoint(env);
-    const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json",accept:"application/json",...aiGatewayRequestHeaders(env,30000,metadata)},body:JSON.stringify({model:dynamicRouteModel(env,metadata),messages:[{role:"user",content:"Return exactly OK."}],temperature:0,stream:false,max_tokens:8}),signal:controller.signal});
+    const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json",accept:"application/json",...aiGatewayRequestHeaders(env,30000,metadata)},body:JSON.stringify({model:dynamicRouteModel(env,metadata),messages:[{role:"user",content:"Return exactly OK. Tools are forbidden."}],temperature:0,stream:false}),signal:controller.signal});
     const provider=cleanHeader(response.headers.get("cf-aig-provider"));
     const model=cleanHeader(response.headers.get("cf-aig-model"));
     const ok=response.status===200&&Boolean(provider)&&Boolean(model);
@@ -101,7 +117,13 @@ export default{
     }
     if(req.method==="POST"&&url.pathname==="/v1/run"){
       const input=await req.clone().json().catch(()=>null);
-      return app.fetch(req,input?requestScopedPanelEnv(input,env):env,ctx);
+      if(!input)return app.fetch(req,env,ctx);
+      const normalized=normalizeExpertInput(input);
+      const headers=new Headers(req.headers);
+      headers.set("content-type","application/json");
+      headers.delete("content-length");
+      const rewritten=new Request(req,{headers,body:JSON.stringify(normalized)});
+      return app.fetch(rewritten,requestScopedPanelEnv(normalized,env),ctx);
     }
     return app.fetch(req,env,ctx);
   }
