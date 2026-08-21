@@ -47,7 +47,7 @@ export function profileExpertTask(input={}){
   const reasoning_depth=pick(input.reasoning_depth,DEPTH,(complexity==="high"||has(prompt,/(推理|因果|证明|博弈|策略|权衡|reasoning|causal|proof|trade-?off)/i))?"deep":"standard");
   const context_size=pick(input.context_size,CONTEXT,chars>12000?"long":chars>3000?"medium":"short");
   const latency_priority=pick(input.latency_priority,LATENCY,"normal");
-  const cost_priority=pick(input.cost_priority,COST,"quality");
+  const cost_priority=pick(input.cost_priority,COST,"balanced");
   return {task_domain,task_type,complexity,reasoning_depth,context_size,latency_priority,cost_priority};
 }
 
