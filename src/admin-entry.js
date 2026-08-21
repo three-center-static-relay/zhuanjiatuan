@@ -1,8 +1,8 @@
 import app,{CenterGate} from "./guard.js";
 import {LANGGRAPH_RUNTIME,probeLangGraphRuntime,runLangGraphRequest} from "./langgraph-runtime.js";
+import {dynamicChatEndpoint,dynamicRouteModel,aiGatewayRequestHeaders} from "./ai-gateway.js";
 export {CenterGate};
 
-// exact-main production receipt trigger; no runtime behavior change.
 const ORIGIN="https://expert.internal";
 const SERVICE="expert-worker";
 const json=(body,status=200)=>Response.json(body,{status,headers:{"cache-control":"no-store"}});
@@ -45,6 +45,23 @@ async function adminContext(env,ctx){
 }
 
 function internalOnly(url){return url.hostname==="expert.internal"}
+function cleanHeader(v){return String(v||"").trim().replace(/[^0-9A-Za-z@._:/-]/g,"_").slice(0,180)}
+
+async function routeProbe(req,env){
+  const input=await req.json().catch(()=>null);
+  const lane=Math.trunc(Number(input?.lane));
+  if(!Number.isInteger(lane)||lane<1||lane>8)return json({ok:false,error:"INVALID_LANE",secrets_redacted:true},400);
+  const metadata={stage:"route-probe",lane:String(lane),capability:"general",depth:"standard",cost_mode:"balanced"};
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+  try{
+    const endpoint=await dynamicChatEndpoint(env);
+    const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json",accept:"application/json",...aiGatewayRequestHeaders(env,30000,metadata)},body:JSON.stringify({model:dynamicRouteModel(env,metadata),messages:[{role:"user",content:"Return exactly OK."}],temperature:0,stream:false,max_tokens:8}),signal:controller.signal});
+    const provider=cleanHeader(response.headers.get("cf-aig-provider"));
+    const model=cleanHeader(response.headers.get("cf-aig-model"));
+    const ok=response.status===200&&Boolean(provider)&&Boolean(model);
+    return json({ok,probe:"expert-dynamic-route-v1",lane,gateway_http_status:response.status,provider:model?provider:null,model:model||null,content_scrubbed:true,request_fixed:true,tools_used:false,web_used:false,secrets_redacted:true,error_code:ok?null:`GATEWAY_HTTP_${response.status}`},ok?200:502);
+  }catch(error){return json({ok:false,probe:"expert-dynamic-route-v1",lane,error_code:error?.name==="AbortError"?"GATEWAY_TIMEOUT":"GATEWAY_REQUEST_FAILED",content_scrubbed:true,request_fixed:true,tools_used:false,web_used:false,secrets_redacted:true},502)}finally{clearTimeout(timer)}
+}
 
 export default{
   async fetch(req,env,ctx){
@@ -52,6 +69,10 @@ export default{
     if(req.method==="GET"&&url.pathname==="/v1/admin/context"){
       if(!internalOnly(url))return json({ok:false,error:"POLICY_DENIED",message:"admin context is service-binding internal only"},403);
       return adminContext(env,ctx);
+    }
+    if(req.method==="POST"&&url.pathname==="/v1/admin/route-probe"){
+      if(!internalOnly(url))return json({ok:false,error:"POLICY_DENIED",message:"route probe is service-binding internal only"},403);
+      return routeProbe(req,env);
     }
     if(req.method==="GET"&&url.pathname==="/v1/langgraph/health"){
       if(!internalOnly(url))return json({ok:false,error:"POLICY_DENIED",message:"LangGraph runtime is service-binding internal only"},403);
