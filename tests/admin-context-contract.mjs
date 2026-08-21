@@ -24,9 +24,16 @@ assert.match(entry,/normalized\.cost_priority="balanced"/);
 assert.match(entry,/normalized\.cost_mode="balanced"/);
 assert.match(entry,/normalized\.tools=false/);
 assert.match(entry,/normalized\.web=false/);
+assert.match(entry,/semanticProfile/);
+assert.match(entry,/profile_source="ai-gateway-semantic"/);
+assert.match(entry,/semantic_task_domains/);
+assert.match(entry,/Classify the task for expert orchestration only/);
+assert.match(entry,/dynamicRouteModel\(env,metadata\)/);
+assert.match(entry,/stage:"planner",lane:"1",capability:"strategy"/);
+assert.match(entry,/cf-aig-step/);
 assert.match(entry,/req\.clone\(\)\.json\(\)/);
 assert.doesNotMatch(entry,/max_tokens:8/);
 assert.match(wrangler,/"main"\s*:\s*"src\/admin-entry\.js"/);
 assert.match(wrangler,/"version_metadata"\s*:\s*\{\s*"binding"\s*:\s*"CF_VERSION_METADATA"\s*\}/);
 
-console.log(JSON.stringify({ok:true,suite:"expert-admin-context-contract",read_only:true,internal_only:true,version_metadata:true,request_scoped_panel_budget:true,soft_cost_length:true,no_token_cap:true,tools_forbidden:true}));
+console.log(JSON.stringify({ok:true,suite:"expert-admin-context-contract",read_only:true,internal_only:true,version_metadata:true,request_scoped_panel_budget:true,soft_cost_length:true,no_token_cap:true,tools_forbidden:true,semantic_profile:"ai-gateway",gateway_step_observed:true}));
