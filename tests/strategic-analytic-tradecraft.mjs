@@ -1,0 +1,5 @@
+import assert from "node:assert/strict";
+import {buildStrategicPrompt,normalizeStrategicMode,strategicTradecraftMeta} from "../src/strategic-analytic-tradecraft.js";
+const forecast=buildStrategicPrompt("Will event X happen?","forecast");assert.match(forecast,/numeric probabilities/);assert.match(forecast,/base rates\/outside view/);assert.match(forecast,/alternative hypothesis/);assert.match(forecast,/source.*independent/i);assert.match(forecast,/signposts/);assert.match(forecast,/low-probability\/high-impact/);assert.match(forecast,/Do not use tools, web/);
+const game=buildStrategicPrompt("How should we react?","policy-game");assert.match(game,/moves, countermoves/);assert.match(game,/second-order effects/);assert.equal(normalizeStrategicMode("unknown"),"assessment");const meta=strategicTradecraftMeta();assert(meta.modes.includes("scenario"));assert(meta.methods.includes("robust-no-regret-options"));assert.equal(meta.decision_authority,false);
+console.log(JSON.stringify({ok:true,suite:"strategic-analytic-tradecraft",modes:meta.modes.length,tools:meta.tools,web:meta.web}));

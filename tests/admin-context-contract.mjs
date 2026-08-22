@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 const entry=fs.readFileSync(new URL("../src/admin-entry.js",import.meta.url),"utf8");
+const strategicEntry=fs.readFileSync(new URL("../src/strategic-analysis-entry.js",import.meta.url),"utf8");
 const wrangler=fs.readFileSync(new URL("../wrangler.jsonc",import.meta.url),"utf8");
 
 assert.match(entry,/\/v1\/admin\/context/);
@@ -61,7 +62,13 @@ assert.match(entry,/mandatory-final-synthesis/);
 assert.match(entry,/FINAL_SYNTHESIS_EMPTY/);
 assert.match(entry,/FINAL_SYNTHESIS_TIMEOUT/);
 assert.doesNotMatch(entry,/max_tokens:8/);
-assert.match(wrangler,/"main"\s*:\s*"src\/admin-entry\.js"/);
+assert.match(wrangler,/"main"\s*:\s*"src\/strategic-analysis-entry\.js"/);
+assert.match(strategicEntry,/from\s+"\.\/admin-entry\.js"/);
+assert.match(strategicEntry,/\/v1\/strategic-analysis\/run/);
+assert.match(strategicEntry,/buildStrategicPrompt/);
+assert.match(strategicEntry,/probability_calibration_requested:true/);
+assert.match(strategicEntry,/alternative_hypotheses_required:true/);
+assert.match(strategicEntry,/signposts_required:true/);
 assert.match(wrangler,/"version_metadata"\s*:\s*\{\s*"binding"\s*:\s*"CF_VERSION_METADATA"\s*\}/);
 
-console.log(JSON.stringify({ok:true,suite:"expert-admin-context-contract",read_only:true,internal_only:true,version_metadata:true,request_scoped_panel_budget:true,adaptive_concurrency:true,adaptive_task_timeout:true,dynamic_cost_mode_default:true,adaptive_final_synthesis:true,soft_cost_length:true,no_token_cap:true,tools_forbidden:true,semantic_profile:"ai-gateway-plus-deterministic-consistency-guard",gateway_step_observed:true,final_synthesis_quality_gate:true,hidden_reasoning_scrub:true,expert_one_direct_final:false}));
+console.log(JSON.stringify({ok:true,suite:"expert-admin-context-contract",read_only:true,internal_only:true,version_metadata:true,request_scoped_panel_budget:true,adaptive_concurrency:true,adaptive_task_timeout:true,dynamic_cost_mode_default:true,adaptive_final_synthesis:true,soft_cost_length:true,no_token_cap:true,tools_forbidden:true,semantic_profile:"ai-gateway-plus-deterministic-consistency-guard",gateway_step_observed:true,final_synthesis_quality_gate:true,hidden_reasoning_scrub:true,expert_one_direct_final:false,strategic_analysis_wrapper:true}));
