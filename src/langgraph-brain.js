@@ -11,8 +11,8 @@ const uniq=values=>[...new Set(values)];
 const clampText=(value,max)=>clean(value).slice(0,max);
 
 function taskFrom(input){const task=input?.task;if(!task||typeof task!=="object"||Array.isArray(task))throw new Error("LA_BRAIN_TASK_REQUIRED");if(!clean(task.goal))throw new Error("LA_BRAIN_GOAL_REQUIRED");return task}
-function chooseMode(task,input){if(input?.brain_mode==="deep")return"deep";if(input?.brain_mode==="routine")return"routine";const caps=Array.isArray(task.required_capabilities)?task.required_capabilities.length:0,criteria=Array.isArray(task.success_criteria)?task.success_criteria.length:0,risk=task.risk||{};return risk.uncertainty==="high"||risk.impact==="high"||risk.severity==="high"||caps>=3||criteria>=4?"deep":"routine"}
 function allowedCenters(task){const configured=Array.isArray(task?.constraints?.allowed_centers)?task.constraints.allowed_centers:[];return configured.length?configured.map(clean).filter(x=>ALLOWED_CENTERS.has(x)):Array.from(ALLOWED_CENTERS)}
+function chooseMode(task,input){if(input?.brain_mode==="deep")return"deep";if(input?.brain_mode==="routine")return"routine";const caps=Array.isArray(task.required_capabilities)?task.required_capabilities.length:0,centers=allowedCenters(task).length,risk=task.risk||{},goal=clean(task.goal);return risk.uncertainty==="high"||risk.impact==="high"||risk.severity==="high"||centers>=3||caps>=4||goal.length>3000?"deep":"routine"}
 function paidFallbackAllowed(task){const budget=task?.budget||{},max=Number(budget.max_paid_usd);if(Number.isFinite(max)&&max<=0)return false;return budget.allow_paid_fallback!==false}
 
 function buildMessages(task,mode){
