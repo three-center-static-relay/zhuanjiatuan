@@ -30,7 +30,11 @@ assert.doesNotMatch(entry,/normalized\.cost_mode="balanced"/);
 assert.match(entry,/normalized\.tools=false/);
 assert.match(entry,/normalized\.web=false/);
 assert.match(entry,/semanticProfile/);
-assert.match(entry,/profile_source="ai-gateway-semantic"/);
+assert.match(entry,/guardSemanticProfile/);
+assert.match(entry,/hybrid-semantic-deterministic-guarded/);
+assert.match(entry,/ai-gateway-semantic-validated/);
+assert.match(entry,/profile_guarded/);
+assert.match(entry,/profile_guard_conflict_count/);
 assert.match(entry,/semantic_task_domains/);
 assert.match(entry,/Classify the task for expert orchestration only/);
 assert.match(entry,/dynamicRouteModel\(env,metadata\)/);
@@ -60,4 +64,4 @@ assert.doesNotMatch(entry,/max_tokens:8/);
 assert.match(wrangler,/"main"\s*:\s*"src\/admin-entry\.js"/);
 assert.match(wrangler,/"version_metadata"\s*:\s*\{\s*"binding"\s*:\s*"CF_VERSION_METADATA"\s*\}/);
 
-console.log(JSON.stringify({ok:true,suite:"expert-admin-context-contract",read_only:true,internal_only:true,version_metadata:true,request_scoped_panel_budget:true,adaptive_concurrency:true,adaptive_task_timeout:true,dynamic_cost_mode_default:true,adaptive_final_synthesis:true,soft_cost_length:true,no_token_cap:true,tools_forbidden:true,semantic_profile:"ai-gateway",gateway_step_observed:true,final_synthesis_quality_gate:true,hidden_reasoning_scrub:true,expert_one_direct_final:false}));
+console.log(JSON.stringify({ok:true,suite:"expert-admin-context-contract",read_only:true,internal_only:true,version_metadata:true,request_scoped_panel_budget:true,adaptive_concurrency:true,adaptive_task_timeout:true,dynamic_cost_mode_default:true,adaptive_final_synthesis:true,soft_cost_length:true,no_token_cap:true,tools_forbidden:true,semantic_profile:"ai-gateway-plus-deterministic-consistency-guard",gateway_step_observed:true,final_synthesis_quality_gate:true,hidden_reasoning_scrub:true,expert_one_direct_final:false}));
