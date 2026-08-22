@@ -4,10 +4,10 @@
   "type": "module",
   "scripts": {
     "stress": "node tests/dynamic-runtime.mjs",
-    "test:syntax": "node --check src/dynamic-index.js && node --check src/ai-gateway.js && node --check src/guard.js && node --check src/governance-relay.js && node --check src/task-profile.js && node --check src/profile-consistency.js && node --check src/bounded-response.js && node --check src/langgraph-runtime.js && node --check src/admin-entry.js",
-    "test:build-gate": "npm run test:syntax && node tests/cloudflare-build-gate-contract.mjs && node tests/capability-manifest-contract.mjs && node tests/bounded-response-contract.mjs && node tests/ai-gateway-contract.mjs && node tests/task-profile-contract.mjs && node tests/profile-consistency-contract.mjs && node tests/dynamic-panel-contract.mjs && node tests/dynamic-control-ownership-contract.mjs && node tests/dynamic-runtime.mjs && node tests/langgraph-runtime-contract.mjs && node tests/admin-context-contract.mjs",
+    "test:syntax": "node --check src/dynamic-index.js && node --check src/ai-gateway.js && node --check src/guard.js && node --check src/governance-relay.js && node --check src/task-profile.js && node --check src/profile-consistency.js && node --check src/bounded-response.js && node --check src/langgraph-brain.js && node --check src/langgraph-runtime.js && node --check src/admin-entry.js",
+    "test:build-gate": "npm run test:syntax && node tests/cloudflare-build-gate-contract.mjs && node tests/capability-manifest-contract.mjs && node tests/bounded-response-contract.mjs && node tests/ai-gateway-contract.mjs && node tests/task-profile-contract.mjs && node tests/profile-consistency-contract.mjs && node tests/dynamic-panel-contract.mjs && node tests/dynamic-control-ownership-contract.mjs && node tests/dynamic-runtime.mjs && node tests/langgraph-brain-contract.mjs && node tests/langgraph-runtime-contract.mjs && node tests/admin-context-contract.mjs",
     "cf:build": "npm run test:build-gate",
-    "cf:preview": "npm run cf:build && npx wrangler deploy --dry-run",
+    "cf:preview": "node tests/langgraph-brain-contract.mjs && node --check src/la-brain-canary-entry.js && node scripts/la-brain-live-canary-run.mjs",
     "cf:deploy": "npm run cf:build && npx wrangler deploy"
   },
   "dependencies": {

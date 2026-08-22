@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "expert-la-brain-canary-worker",
+  "main": "src/la-brain-canary-entry.js",
+  "compatibility_date": "2026-08-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "ai": {"binding": "AI"},
+  "vars": {
+    "CLOUDFLARE_ACCOUNT_ID": "e3aec027af13c557bbcb831d29c1e7b4",
+    "AI_GATEWAY_ID": "test",
+    "LA_CANARY": "true"
+  },
+  "observability": {"enabled":true,"logs":{"enabled":true,"head_sampling_rate":1}}
+}
