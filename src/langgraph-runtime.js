@@ -1,6 +1,7 @@
 // Exact-main Cloudflare production receipt trigger for shared supervisor validation runtime.
 import guardedApp from "./guard.js";
 import { Annotation, StateGraph, START, END } from "@langchain/langgraph";
+import {runLangGraphBrain} from "./langgraph-brain.js";
 
 export const LANGGRAPH_RUNTIME = "@langchain/langgraph@1.4.10";
 
@@ -126,6 +127,7 @@ export async function probeLangGraphRuntime() {
     mode: "cloudflare-worker-internal-canary",
     state_graph: true,
     supervisor_validation: true,
+    brain_advisory: true,
     trace: result.trace || []
   };
 }
@@ -155,6 +157,18 @@ async function runSupervisorValidation(input) {
 
 export async function runLangGraphRequest(input, env, ctx) {
   if (input?.mode === "supervisor-validate") return runSupervisorValidation(input);
+  if (input?.mode === "brain-advisory") {
+    const result=await runLangGraphBrain(input,env);
+    return {
+      ...result,
+      runtime: LANGGRAPH_RUNTIME,
+      mode: "brain-advisory",
+      model_invoked: Boolean(result?.model),
+      tools_used: false,
+      web_used: false,
+      production_mutation: false
+    };
+  }
 
   const task = input?.task && typeof input.task === "object" && !Array.isArray(input.task)
     ? input.task
