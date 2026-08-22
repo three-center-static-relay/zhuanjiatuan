@@ -27,6 +27,10 @@ assert.match(worker,/plan\.experts\.length/);
 assert.match(worker,/reasoning_depth==="deep"/);
 assert.match(worker,/latency_priority==="fast"/);
 
+// Dynamic cost mode is planner-owned only when the caller has not supplied an explicit valid control-plane intent.
+assert.match(worker,/explicitCostMode=String\(input\?\.cost_mode\|\|\"\"\)/);
+assert.match(worker,/COST_MODES\.has\(explicitCostMode\)\?explicitCostMode:normalizeCostMode\(raw\?\.cost_mode/);
+
 // Task profiling is semantic first through an AI Gateway dynamic route, with deterministic fallback.
 assert.match(entry,/semanticProfile/);
 assert.match(entry,/profile_source="ai-gateway-semantic"/);
@@ -80,9 +84,10 @@ assert.doesNotMatch(entry,/max_tokens\s*:/);
 
 console.log(JSON.stringify({
   ok:true,
-  suite:"dynamic-control-ownership-v2",
-  organization_owner:"ai-gateway-routed-panel-architect",
+  suite:"dynamic-control-ownership-v3",
+  organization_owner:"ai-gateway-routed-panel-architect-unless-explicit-caller-cost-intent",
   model_execution_owner:"cloudflare-ai-gateway-dynamic-route",
-  dynamic:["semantic-task-profile","professions","roles","expert-count","judge-count","rounds","topology","cost-mode","internal-concurrency","task-timeout","stage-timeout","final-synthesis-cost-mode","final-synthesis-timeout","model","provider","retry-fallback-selection"],
+  dynamic:["semantic-task-profile","professions","roles","expert-count","judge-count","rounds","topology","cost-mode-when-unspecified","internal-concurrency","task-timeout","stage-timeout","final-synthesis-cost-mode","final-synthesis-timeout","model","provider","retry-fallback-selection"],
+  explicit_control_plane:["valid-caller-cost-mode"],
   static_guardrails:["source-pool-allowlist","tools-off","web-off","lane-ceilings","participant-ceilings","round-ceilings","auth-and-resource-safety","sampling-stability"]
 }));
