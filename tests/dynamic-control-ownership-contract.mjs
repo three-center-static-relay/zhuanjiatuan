@@ -27,6 +27,15 @@ assert.match(worker,/plan\.experts\.length/);
 assert.match(worker,/reasoning_depth==="deep"/);
 assert.match(worker,/latency_priority==="fast"/);
 
+// Stability guardrails for adaptive organization.
+assert.match(worker,/function judgeRequired\(profile\)/);
+assert.match(worker,/profile\?\.task_type==="comparison"/);
+assert.match(worker,/const requireJudge=judgeRequired\(profile\)/);
+assert.match(worker,/COST_MODES\.has\(explicitCost\)\?explicitCost/);
+assert.match(worker,/caller explicitly fixed cost_mode/);
+assert.match(worker,/deep\?120000:105000/);
+assert.match(worker,/Math\.max\(60000,Math\.min\(l\.maxStageMs,ms\)\)/);
+
 // Task profiling is semantic first through an AI Gateway dynamic route, with deterministic fallback.
 assert.match(entry,/semanticProfile/);
 assert.match(entry,/profile_source="ai-gateway-semantic"/);
@@ -80,9 +89,10 @@ assert.doesNotMatch(entry,/max_tokens\s*:/);
 
 console.log(JSON.stringify({
   ok:true,
-  suite:"dynamic-control-ownership-v2",
+  suite:"dynamic-control-ownership-v3",
   organization_owner:"ai-gateway-routed-panel-architect",
   model_execution_owner:"cloudflare-ai-gateway-dynamic-route",
   dynamic:["semantic-task-profile","professions","roles","expert-count","judge-count","rounds","topology","cost-mode","internal-concurrency","task-timeout","stage-timeout","final-synthesis-cost-mode","final-synthesis-timeout","model","provider","retry-fallback-selection"],
+  adaptive_guardrails:["explicit-cost-precedence","comparison-high-deep-judge-floor","stage-budget-separated-from-model-timeout"],
   static_guardrails:["source-pool-allowlist","tools-off","web-off","lane-ceilings","participant-ceilings","round-ceilings","auth-and-resource-safety","sampling-stability"]
 }));
