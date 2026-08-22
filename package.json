@@ -7,7 +7,7 @@
     "test:syntax": "node --check src/dynamic-index.js && node --check src/ai-gateway.js && node --check src/guard.js && node --check src/governance-relay.js && node --check src/task-profile.js && node --check src/profile-consistency.js && node --check src/bounded-response.js && node --check src/langgraph-brain.js && node --check src/langgraph-runtime.js && node --check src/admin-entry.js && node --check src/la-four-limb-canary-entry.js && node --check scripts/la-four-limb-live-run.mjs",
     "test:build-gate": "npm run test:syntax && node tests/cloudflare-build-gate-contract.mjs && node tests/capability-manifest-contract.mjs && node tests/bounded-response-contract.mjs && node tests/ai-gateway-contract.mjs && node tests/task-profile-contract.mjs && node tests/profile-consistency-contract.mjs && node tests/dynamic-panel-contract.mjs && node tests/dynamic-control-ownership-contract.mjs && node tests/dynamic-runtime.mjs && node tests/langgraph-brain-contract.mjs && node tests/langgraph-runtime-contract.mjs && node tests/admin-context-contract.mjs",
     "cf:build": "npm run test:build-gate",
-    "cf:preview": "node tests/langgraph-brain-contract.mjs && node --check src/la-four-limb-canary-entry.js && node scripts/la-four-limb-live-run.mjs intelligence",
+    "cf:preview": "node tests/langgraph-brain-contract.mjs && node --check src/la-four-limb-canary-entry.js && node scripts/la-four-limb-live-run.mjs compute",
     "cf:deploy": "npm run cf:build && npx wrangler deploy"
   },
   "dependencies": {
