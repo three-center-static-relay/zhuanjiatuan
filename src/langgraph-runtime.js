@@ -1,3 +1,4 @@
+// Exact-main Cloudflare production receipt trigger for shared supervisor validation runtime.
 import guardedApp from "./guard.js";
 import { Annotation, StateGraph, START, END } from "@langchain/langgraph";
 
@@ -7,6 +8,17 @@ const RuntimeState = Annotation.Root({
   task: Annotation(),
   governance: Annotation(),
   execution: Annotation(),
+  status: Annotation(),
+  error: Annotation(),
+  trace: Annotation({
+    reducer: (left, right) => [...(Array.isArray(left) ? left : []), ...(Array.isArray(right) ? right : [])],
+    default: () => []
+  })
+});
+
+const ValidationState = Annotation.Root({
+  plan: Annotation(),
+  validation: Annotation(),
   status: Annotation(),
   error: Annotation(),
   trace: Annotation({
@@ -61,6 +73,42 @@ function buildRuntimeGraph(env, ctx) {
   return graph.compile();
 }
 
+function validateSupervisorPlan(plan) {
+  const nodes = Array.isArray(plan?.graph?.nodes) ? plan.graph.nodes : [];
+  const allowedCenters = new Set(["governance", "intelligence", "compute", "expert"]);
+  const invalidCenter = nodes.find((node) => !allowedCenters.has(String(node?.center || "")));
+  const safe = Boolean(plan && typeof plan === "object")
+    && plan?.ok === true
+    && plan?.execution_started === false
+    && plan?.side_effects_started === false
+    && plan?.production_mutation === false
+    && !invalidCenter;
+  return {
+    ok: safe,
+    fail_closed: true,
+    invalid_center: invalidCenter?.center || null,
+    production_mutation: false,
+    execution_started: false,
+    side_effects_started: false
+  };
+}
+
+function buildSupervisorValidationGraph() {
+  return new StateGraph(ValidationState)
+    .addNode("validate", async (state) => {
+      const validation = validateSupervisorPlan(state.plan);
+      return {
+        validation,
+        status: validation.ok ? "validated" : "rejected",
+        error: validation.ok ? null : "LANGGRAPH_SUPERVISOR_PLAN_REJECTED",
+        trace: ["validate"]
+      };
+    })
+    .addEdge(START, "validate")
+    .addEdge("validate", END)
+    .compile();
+}
+
 function buildProbeGraph() {
   return new StateGraph(ProbeState)
     .addNode("probe", async () => ({ status: "ready", trace: ["probe"] }))
@@ -77,11 +125,37 @@ export async function probeLangGraphRuntime() {
     runtime: LANGGRAPH_RUNTIME,
     mode: "cloudflare-worker-internal-canary",
     state_graph: true,
+    supervisor_validation: true,
     trace: result.trace || []
   };
 }
 
+async function runSupervisorValidation(input) {
+  const graph = buildSupervisorValidationGraph();
+  const result = await graph.invoke({
+    plan: input?.plan || null,
+    validation: null,
+    status: "received",
+    error: null,
+    trace: []
+  });
+  return {
+    ok: result.status === "validated",
+    runtime: LANGGRAPH_RUNTIME,
+    mode: "supervisor-validate",
+    status: result.status,
+    error: result.error || null,
+    validation: result.validation || null,
+    trace: result.trace || [],
+    model_invoked: false,
+    tools_used: false,
+    web_used: false
+  };
+}
+
 export async function runLangGraphRequest(input, env, ctx) {
+  if (input?.mode === "supervisor-validate") return runSupervisorValidation(input);
+
   const task = input?.task && typeof input.task === "object" && !Array.isArray(input.task)
     ? input.task
     : input;
@@ -98,6 +172,7 @@ export async function runLangGraphRequest(input, env, ctx) {
   return {
     ok: result.status === "completed",
     runtime: LANGGRAPH_RUNTIME,
+    mode: "expert-execution",
     status: result.status,
     error: result.error || null,
     governance: result.governance || null,

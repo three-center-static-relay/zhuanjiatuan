@@ -8,7 +8,7 @@ const capability=(input,observedAt,configured)=>({
   reliability:{score:0,basis:"unverified-no-bound-runtime-receipt"},accuracy:{score:0,basis:"unverified-no-bound-runtime-receipt"},freshness:{observed_at:observedAt,ttl_seconds:1800},
   health:{status:configured?"configured-unverified":"unavailable",checked_at:observedAt},fitness:{quality:0,reliability:0,cost:0,latency:0,security:0,adaptability:0,complexity:0},
   trust:{level:"T0",status:configured?"unverified":"quarantined"},verification:{status:configured?"configured-unverified":"unconfigured",scope:"configuration-only",verified_at:null,receipt_digest:null,sample_size:0},
-  license:"provider-specific",jurisdiction:["global"],first_seen:"2026-08-18T00:00:00.000Z",last_verified:null
+  license:"provider-specific",jurisdiction:["global"],first_seen:"2026-08-18T00:00:00.000Z",last_verified:observedAt
 });
 
 export function expertCapabilityManifest({configured=false}={}){
@@ -16,11 +16,19 @@ export function expertCapabilityManifest({configured=false}={}){
   const capabilities=[
     capability({id:"expert.deliberation",type:"composite",domain:"expert",operations:["expert.assess","panel.compose.dynamic","profession.generate.dynamic","multi-model.deliberate","rounds.adapt","topology.adapt","uncertainty.calibrate"]},observedAt,configured),
     capability({id:"expert.judgment",type:"composite",domain:"expert",operations:["judge.count.adapt","judgment.synthesize","conflict.resolve","evidence.critique","adversarial.review"],dependencies:["expert.deliberation"]},observedAt,configured),
-    capability({id:"expert.reasoning",domain:"reasoning",operations:["llm.reasoning","model.route.dynamic","free-paid.adapt","company-lane.allocate","decision.review","assumption.audit"],compatible_with:["intelligence.provider-query","compute.simulation"]},observedAt,configured)
+    capability({id:"expert.reasoning",domain:"reasoning",operations:["llm.reasoning","model.route.dynamic","free-paid.adapt","company-lane.allocate","decision.review","assumption.audit"],compatible_with:["intelligence.provider-query","compute.simulation"]},observedAt,configured),
+    capability({id:"expert.structured-strategic-analysis",type:"composite",domain:"strategic-analysis",operations:["fact-assumption-judgment.separate","alternative-hypotheses","dissent.preserve","source-independence.challenge","low-probability-high-impact.review","signpost.define"],dependencies:["expert.deliberation","expert.judgment"],compatible_with:["intelligence.situational-fusion","intelligence.warning-and-retask"]},observedAt,configured),
+    capability({id:"expert.forecasting",type:"composite",domain:"forecasting",operations:["probability.estimate","confidence.rate","base-rate.outside-view","forecast-horizon.define","belief-update-trigger.define"],dependencies:["expert.structured-strategic-analysis"],compatible_with:["compute.forecast-calibration"]},observedAt,configured),
+    capability({id:"expert.scenario-policy-game",type:"composite",domain:"strategy",operations:["scenario.branch","shock.identify","stakeholder.map","move-countermove","second-order-effects","robust-option.recommend"],dependencies:["expert.structured-strategic-analysis"],compatible_with:["compute.robust-decision-analysis","compute.assumption-stress"]},observedAt,configured)
   ];
   return{abi_version:CAPABILITY_ABI_VERSION,center:"expert",generated_at:observedAt,provider_summary:{configured,runtime_verified:0,dynamic_panel:true,all_model_families_within_approved_sources:true,free_models_allowed:true,max_experts:6,max_judges:2,max_rounds:2,max_company_lanes:8},capabilities,ecology:[
     {from:"expert.judgment",relation:"REQUIRES",to:"expert.deliberation"},
     {from:"expert.reasoning",relation:"COMPLEMENTS",to:"intelligence.provider-query"},
-    {from:"expert.reasoning",relation:"COMPLEMENTS",to:"compute.simulation"}
+    {from:"expert.reasoning",relation:"COMPLEMENTS",to:"compute.simulation"},
+    {from:"expert.structured-strategic-analysis",relation:"REQUIRES",to:"expert.deliberation"},
+    {from:"expert.structured-strategic-analysis",relation:"COMPLEMENTS",to:"intelligence.situational-fusion"},
+    {from:"expert.forecasting",relation:"VALIDATED_BY",to:"compute.forecast-calibration"},
+    {from:"expert.scenario-policy-game",relation:"COMPLEMENTS",to:"compute.robust-decision-analysis"},
+    {from:"expert.scenario-policy-game",relation:"COMPLEMENTS",to:"compute.assumption-stress"}
   ]};
 }
