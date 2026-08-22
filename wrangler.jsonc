@@ -4,7 +4,7 @@
   // production deploy trigger: official LangGraph runtime on main
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "expert-worker",
-  "main": "src/admin-entry.js",
+  "main": "src/strategic-analysis-entry.js",
   "compatibility_date": "2026-08-20",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
