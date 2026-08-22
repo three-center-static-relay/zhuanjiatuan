@@ -33,6 +33,18 @@ assert.match(entry,/profile_source="ai-gateway-semantic"/);
 assert.match(entry,/stage:"planner",lane:"1",capability:"strategy"/);
 assert.match(entry,/dynamicRouteModel\(env,metadata\)/);
 
+// Safe runtime controls adapt to the semantic profile but remain bounded by fixed ceilings.
+assert.match(entry,/adaptiveConcurrency/);
+assert.match(entry,/EXPERT_INTERNAL_CONCURRENCY:String\(internal\)/);
+assert.match(entry,/adaptiveTaskSeconds/);
+assert.match(entry,/applyAdaptiveRuntimeControls/);
+assert.match(entry,/runtime_control_source="semantic-profile-bounded"/);
+assert.match(entry,/finalSynthesisCostMode/);
+assert.match(entry,/finalSynthesisTimeout/);
+assert.match(entry,/cost_mode:costMode/);
+assert.match(entry,/delete normalized\.cost_mode/);
+assert.doesNotMatch(entry,/normalized\.cost_mode="balanced"/);
+
 // Final-answer quality is mandatory; Expert #1 may not silently become the user answer.
 assert.match(entry,/gatewayFinalSynthesis/);
 assert.match(entry,/final_answer_source="panel-final-judge"/);
@@ -63,13 +75,14 @@ assert.match(worker,/tools:false/);
 assert.match(worker,/web:false/);
 assert.match(entry,/normalized\.tools=false/);
 assert.match(entry,/normalized\.web=false/);
+assert.match(entry,/temperature:0\.15/);
 assert.doesNotMatch(entry,/max_tokens\s*:/);
 
 console.log(JSON.stringify({
   ok:true,
-  suite:"dynamic-control-ownership-v1",
+  suite:"dynamic-control-ownership-v2",
   organization_owner:"ai-gateway-routed-panel-architect",
   model_execution_owner:"cloudflare-ai-gateway-dynamic-route",
-  dynamic:["semantic-task-profile","professions","roles","expert-count","judge-count","rounds","topology","cost-mode","internal-concurrency","stage-timeout","model","provider","retry-fallback-selection"],
-  static_guardrails:["source-pool-allowlist","tools-off","web-off","lane-ceilings","participant-ceilings","round-ceilings","auth-and-resource-safety"]
+  dynamic:["semantic-task-profile","professions","roles","expert-count","judge-count","rounds","topology","cost-mode","internal-concurrency","task-timeout","stage-timeout","final-synthesis-cost-mode","final-synthesis-timeout","model","provider","retry-fallback-selection"],
+  static_guardrails:["source-pool-allowlist","tools-off","web-off","lane-ceilings","participant-ceilings","round-ceilings","auth-and-resource-safety","sampling-stability"]
 }));
