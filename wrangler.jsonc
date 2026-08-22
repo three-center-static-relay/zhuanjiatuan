@@ -1,12 +1,38 @@
 {
+  // production receipt trigger: Expert V4.2 lane-pair exact-main
+  // Cloudflare preview trigger: official LangGraph runtime PR #49
+  // production deploy trigger: official LangGraph runtime on main
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "expert-worker",
-  "main": "src/index.js",
+  "main": "src/strategic-analysis-entry.js",
   "compatibility_date": "2026-08-20",
   "compatibility_flags": ["nodejs_compat"],
-  "workers_dev": true,
+  "workers_dev": false,
+  "preview_urls": false,
   "version_metadata": {"binding": "CF_VERSION_METADATA"},
-  "build": {"command": "node --check src/index.js"},
-  "vars": {"EXPERT_RUNTIME": "langgraph-candidate"},
+  "secrets": {"required": ["AI_GATEWAY_TOKEN"]},
+  "durable_objects": {"bindings": [{"name": "CENTER_GATE", "class_name": "CenterGate"}]},
+  "exports": {"CenterGate": {"type":"durable-object","storage":"sqlite"}},
+  "vars": {
+    "CLOUDFLARE_ACCOUNT_ID": "e3aec027af13c557bbcb831d29c1e7b4",
+    "AI_GATEWAY_ID": "test",
+    "AI_GATEWAY_ROUTE_FAMILY": "expert-panel",
+    "MODEL_SOURCE_POLICY": "three-source-cloudflare-free-first",
+    "MODEL_SOURCE_CLASSES": "workers-ai,openrouter,huggingface",
+    "WORKERS_AI_FREE_ONLY": "true",
+    "MODEL_ID_PINNING": "false",
+    "FUTURE_MODELS_AUTO_DISCOVER": "true",
+    "AI_GATEWAY_MAX_ATTEMPTS": "1",
+    "EXPERT_MAX_LANES": "8",
+    "EXPERT_MAX_EXPERTS": "8",
+    "EXPERT_MAX_JUDGES": "2",
+    "EXPERT_MAX_ROUNDS": "3",
+    "EXPERT_MAX_CONCURRENT_TASKS": "2",
+    "EXPERT_INTERNAL_CONCURRENCY": "6",
+    "EXPERT_MAX_TASK_SECONDS": "600",
+    "EXPERT_MAX_STAGE_MS": "120000",
+    "LANGGRAPH_RUNTIME": "@langchain/langgraph@1.4.10",
+    "LANGGRAPH_MODE": "internal-canary"
+  },
   "observability": {"enabled":true,"logs":{"enabled":true,"head_sampling_rate":1},"traces":{"enabled":true,"head_sampling_rate":0.02}}
 }

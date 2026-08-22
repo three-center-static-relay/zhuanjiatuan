@@ -1,18 +1,3 @@
 import assert from "node:assert/strict";
 import {CAPABILITY_ABI_VERSION,expertCapabilityManifest} from "../src/capability-manifest.js";
-
-const manifest=expertCapabilityManifest({configured:true});
-assert.equal(manifest.abi_version,CAPABILITY_ABI_VERSION);
-assert.equal(manifest.center,"expert");
-assert.equal(manifest.capabilities.length,3);
-const ids=new Set();
-for(const capability of manifest.capabilities){
-  assert.match(capability.id,/^[a-z0-9][a-z0-9._:-]+$/);
-  assert.ok(capability.operations.length>0);
-  assert.equal(capability.write_scope,"none");
-  assert.equal(capability.network_scope,"openrouter-only");
-  assert.equal(capability.trust.level,"T2");
-  assert.equal(ids.has(capability.id),false);ids.add(capability.id);
-}
-assert.doesNotMatch(JSON.stringify(manifest),/token|password|authorization|cookie|api.?key/i);
-console.log(JSON.stringify({ok:true,suite:"capability-manifest-contract",center:"expert",capability_count:manifest.capabilities.length}));
+const manifest=expertCapabilityManifest({configured:true});assert.equal(manifest.abi_version,CAPABILITY_ABI_VERSION);assert.equal(manifest.center,"expert");assert.equal(manifest.capabilities.length,3);assert.equal(manifest.provider_summary.dynamic_panel,true);assert.equal(manifest.provider_summary.free_models_allowed,true);assert.equal(manifest.provider_summary.max_experts,6);assert.equal(manifest.provider_summary.max_company_lanes,8);const ids=new Set();for(const capability of manifest.capabilities){assert.match(capability.id,/^[a-z0-9][a-z0-9._:-]+$/);assert.ok(capability.operations.length>0);assert.equal(capability.write_scope,"none");assert.equal(capability.network_scope,"cloudflare-ai-gateway-only");assert.equal(capability.trust.level,"T0");assert.equal(capability.trust.status,"unverified");assert.equal(capability.verification.status,"configured-unverified");assert.equal(capability.verification.verified_at,null);assert.equal(capability.verification.receipt_digest,null);assert.equal(capability.verification.sample_size,0);assert.equal(Number.isNaN(Date.parse(capability.last_verified)),false);assert.equal(capability.last_verified,capability.health.checked_at);assert.equal(capability.last_verified,capability.freshness.observed_at);assert.equal(capability.cost.unit_cost,null);assert.equal(capability.conflicts_with.includes("free-models"),false);assert.equal(ids.has(capability.id),false);ids.add(capability.id)}assert.equal(manifest.provider_summary.runtime_verified,0);assert.doesNotMatch(JSON.stringify(manifest),/token|password|authorization|cookie|api.?key/i);console.log(JSON.stringify({ok:true,suite:"capability-manifest-contract",center:"expert",capability_count:manifest.capabilities.length,dynamic_panel:true,free_models_allowed:true,abi_last_verified_valid:true,runtime_verification_not_claimed:true}));
