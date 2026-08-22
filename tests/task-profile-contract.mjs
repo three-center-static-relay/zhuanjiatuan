@@ -11,6 +11,12 @@ const coding=profileExpertTask({prompt:"Review this Cloudflare Worker API code a
 assert.equal(coding.task_domain,"coding");
 assert.equal(coding.task_type,"coding");
 
+const occupation=profileExpertTask({prompt:"请比较在福州跑快递、送外卖、开网约车和当保安哪个好，综合收入、稳定性、自由度、成本、风险和长期可持续性。"});
+assert.equal(occupation.task_domain,"business");
+assert.equal(occupation.task_type,"comparison");
+assert.notEqual(occupation.task_domain,"coding");
+assert.notEqual(occupation.task_type,"coding");
+
 const explicit=profileExpertTask({
   prompt:"general task",
   task_domain:"finance",
