@@ -18,7 +18,7 @@ function inferDomain(prompt){
   if(has(p,/(数学|统计|概率|蒙特卡罗|仿真|模拟|优化|回归|计量|quantitative|statistics|probability|simulation|optimization)/i))return "quantitative";
   if(has(p,/(医学|医疗|临床|症状|诊断|药物|疾病|medical|clinical|diagnosis|treatment)/i))return "medical";
   if(has(p,/(地图|地理|gis|经纬度|空间分析|位置数据|geospatial|latitude|longitude)/i))return "geospatial";
-  if(has(p,/(商业|经营|公司|市场|营销|销售|客户|business|market|marketing|sales|company)/i))return "business";
+  if(has(p,/(商业|经营|公司|市场|营销|销售|客户|职业|就业|工作|岗位|收入|工资|薪资|外卖|快递|网约车|保安|business|market|marketing|sales|company|job|occupation|career|income|wage|courier|delivery|ride-hailing|security guard)/i))return "business";
   if(has(p,/(政策|政府|宏观|监管|公共政策|policy|government|macro)/i))return "policy";
   if(has(p,/(科学|物理|化学|生物|science|physics|chemistry|biology)/i))return "science";
   if(has(p,/(社会|心理|人群|舆情|行为|social|psychology|behavior)/i))return "social";
@@ -30,7 +30,7 @@ function inferTaskType(prompt,domain){
   const p=prompt.toLowerCase();
   if(domain==="coding")return "coding";
   if(domain==="quantitative")return "quantitative";
-  if(has(p,/(对比|比较|区别|优劣|vs\.?|versus|compare|comparison)/i))return "comparison";
+  if(has(p,/(对比|比较|区别|优劣|哪个好|哪种更好|排名|vs\.?|versus|compare|comparison|which is better|rank)/i))return "comparison";
   if(has(p,/(方案|规划|路线图|策略|设计|计划|plan|strategy|roadmap|design)/i))return "planning";
   if(has(p,/(汇总|综合|归纳|整合|synthesi[sz]e|summary|aggregate)/i))return "synthesis";
   if(has(p,/(文献|论文|研究|证据|资料|research|literature|evidence)/i))return "research";
